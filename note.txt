@@ -1,0 +1,19 @@
+Set up và Config trước khi code 
+  Postgres      5432
+  Redis         6379
+  Adminer       8082
+
+  Adminer UI: http://localhost:8083
+
+  Login:
+    System: PostgreSQL
+    Server: postgres
+    User: postgres
+    Password: postgres
+    Database: marketplace_dev
+
+
+  Cách để vào Redis kiểm tra xem trong redis có gì:
+    Use Redis CLI inside the container
+    Run: docker exec -it marketplace_redis redis-cli 
+    Sau khi chạy lệnh trên sẽ đi vào Redis shell: 127.0.0.1:6379
