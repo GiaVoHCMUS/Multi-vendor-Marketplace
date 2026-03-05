@@ -1,0 +1,65 @@
+Set up và Config trước khi code 
+  Postgres      5432
+  Redis         6379
+  Adminer       8082
+
+  Adminer UI: http://localhost:8083
+
+  Login:
+    System: PostgreSQL
+    Server: postgres
+    User: postgres
+    Password: postgres
+    Database: marketplace_dev
+
+
+  Cách để vào Redis kiểm tra xem trong redis có gì:
+    Use Redis CLI inside the container
+    Run: docker exec -it marketplace_redis redis-cli 
+    Sau khi chạy lệnh trên sẽ đi vào Redis shell: 127.0.0.1:6379
+
+  Cấu trúc thư mục sẽ code Modular Layered Architechture
+    backend
+    │
+    ├── prisma
+    │   ├── schema.prisma
+    │   └── migrations
+    │
+    ├── src
+    │   │
+    │   ├── config
+    │   │   ├── prisma.js
+    │   │   ├── redis.js
+    │   │   └── env.js
+    │   │
+    │   ├── modules
+    │   │   ├── auth
+    │   │   │   ├── auth.controller.js
+    │   │   │   ├── auth.service.js
+    │   │   │   ├── auth.repository.js
+    │   │   │   └── auth.route.js
+    │   │   │
+    │   │   ├── user
+    │   │   │   ├── user.controller.js
+    │   │   │   ├── user.service.js
+    │   │   │   ├── user.repository.js
+    │   │   │   └── user.route.js
+    │   │   │
+    │   │   ├── product
+    │   │   ├── order
+    │   │   └── cart
+    │   │
+    │   ├── middlewares
+    │   │   ├── auth.middleware.js
+    │   │   └── error.middleware.js
+    │   │
+    │   ├── routes
+    │   │   └── index.js
+    │   │
+    │   ├── utils
+    │   │
+    │   ├── app.js
+    │   └── server.js
+    │
+    ├── package.json
+    └── .env
