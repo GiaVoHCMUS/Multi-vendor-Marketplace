@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
 import { successResponse } from './utils/response';
+import { globalErrorHandler } from './middleware/global.middleware';
 
 const app : Application = express();
 
@@ -19,5 +20,8 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
   });
 });
+
+// Global Error Middleware
+app.use(globalErrorHandler)
 
 export default app;
