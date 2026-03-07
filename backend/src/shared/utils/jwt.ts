@@ -1,5 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { AppJwtPayload } from '@/types/auth';
+import { UserRole } from '@prisma/client';
 
 // Load env variable
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -22,7 +23,7 @@ const REFRESH_EXPIRES_IN =
 // JWT Utility
 export const tokenUtils = {
   // Generate Access Token
-  generateAccessToken(userId: string, role?: string): string {
+  generateAccessToken(userId: string, role?: UserRole): string {
     const payload: AppJwtPayload = {
       id: userId,
       role,
