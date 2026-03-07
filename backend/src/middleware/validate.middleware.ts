@@ -6,6 +6,11 @@ import { ParamsDictionary } from 'express-serve-static-core';
 
 export const validate = (schema: ZodObject) =>
   catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    Object.defineProperty(req, 'query', {
+      ...Object.getOwnPropertyDescriptor(req, 'query'),
+      value: req.query,
+      writable: true,
+    });
     const parsed = await schema.parseAsync({
       body: req.body,
       query: req.query,
