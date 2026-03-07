@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodObject } from 'zod';
-import { catchAsync } from '@/utils/catchAsync';
+import { catchAsync } from '@/shared/utils/catchAsync';
 import { ParsedQs } from 'qs';
 import { ParamsDictionary } from 'express-serve-static-core';
 
