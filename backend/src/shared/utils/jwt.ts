@@ -1,6 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { AppJwtPayload } from '@/types/auth';
 import { UserRole } from '@prisma/client';
+import { JwtAccessPayload, JwtRefreshPayload } from '../types/auth';
 
 // Load env variable
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,9 +23,9 @@ const REFRESH_EXPIRES_IN =
 // JWT Utility
 export const tokenUtils = {
   // Generate Access Token
-  generateAccessToken(userId: string, role?: UserRole): string {
-    const payload: AppJwtPayload = {
-      id: userId,
+  generateAccessToken(userId: string, role: UserRole): string {
+    const payload: JwtAccessPayload = {
+      sub: userId,
       role,
     };
 
@@ -36,8 +36,8 @@ export const tokenUtils = {
 
   // Generate Refresh Token
   generateRefreshToken(userId: string): string {
-    const payload: AppJwtPayload = {
-      id: userId,
+    const payload: JwtRefreshPayload = {
+      sub: userId,
     };
 
     return jwt.sign(payload, JWT_REFRESH_SECRET, {
@@ -46,18 +46,18 @@ export const tokenUtils = {
   },
 
   // Verify Access Token
-  verifyAccessToken(token: string): AppJwtPayload {
+  verifyAccessToken(token: string): JwtAccessPayload {
     try {
-      return jwt.verify(token, JWT_SECRET) as AppJwtPayload;
+      return jwt.verify(token, JWT_SECRET) as JwtAccessPayload;
     } catch {
       throw new Error('Invalid or expired access token');
     }
   },
 
   // Verify Refresh Token
-  verifyRefreshToken(token: string): AppJwtPayload {
+  verifyRefreshToken(token: string): JwtRefreshPayload {
     try {
-      return jwt.verify(token, JWT_REFRESH_SECRET) as AppJwtPayload;
+      return jwt.verify(token, JWT_REFRESH_SECRET) as JwtRefreshPayload;
     } catch {
       throw new Error('Invalid or expired refresh token');
     }

@@ -1,13 +1,9 @@
-import { User } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
-export type AuthUser = Omit<
-  User,
-  'password',
-  'createdAt',
-  'updatedAt',
-  'deletedAt',
-  'isVerified'
->;
+export type AuthUser = {
+  id: string;
+  role: UserRole;
+};
 
 // Chúng ta phải bọc trong 'declare global' để TypeScript hiểu
 // là đang mở rộng không gian tên toàn cầu

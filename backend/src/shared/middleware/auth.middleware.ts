@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { tokenUtils } from '../utils/jwt';
 import { AppError } from '../utils/AppError';
-import { prisma } from '@/config/prisma';
-import { AuthUser } from '../types/express';
 import { catchAsync } from '../utils/catchAsync';
 import { UserRole } from '@prisma/client';
 
@@ -29,23 +27,10 @@ export const protect = catchAsync(
 
     const decoded = tokenUtils.verifyAccessToken(token);
 
-    const currentUser = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        avatarUrl: true,
-        bio: true,
-        role: true,
-      },
-    });
-
-    if (!currentUser) {
-      return next(new AppError('Người dùng này đã không còn tồn tại.', 404));
+    req.user = {
+      id: decoded.sub,
+      role: decoded.role,
     }
-
-    req.user = currentUser as AuthUser;
 
     next();
   },
