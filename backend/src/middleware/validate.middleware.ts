@@ -4,7 +4,7 @@ import { catchAsync } from '@/utils/catchAsync';
 import { ParsedQs } from 'qs';
 import { ParamsDictionary } from 'express-serve-static-core';
 
-export const validate = (schema: ZodObject) => {
+export const validate = (schema: ZodObject) =>
   catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const parsed = await schema.parseAsync({
       body: req.body,
@@ -18,4 +18,3 @@ export const validate = (schema: ZodObject) => {
 
     next();
   });
-};
