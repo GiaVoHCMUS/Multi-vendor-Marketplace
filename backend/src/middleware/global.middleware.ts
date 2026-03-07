@@ -10,18 +10,35 @@ export const globalErrorHandler = (
   res: Response,
   next: NextFunction,
 ) => {
-  const statusCode = err.statusCode || 500;
+  let error = { ...err };
+  error.message = err.message;
+  error.stack = err.stack;
 
-  // Nếu là isOperational thì ta hiện message, còn nếu là lỗi do code bug thì hiện Internal Server Error
-  const message = err.isOperational ? err.message : 'Internal Server Error';
+  // 1. Nếu là ZodError -> Biến nó thành AppError (400)
+  if (err instanceof ZodError) {
+    const formattedErrors = err.issues.map((e) => ({
+      path: e.path[1],
+      message: e.message,
+    }));
+    error = new AppError('Dữ liệu nhập vào không hợp lệ', 400, formattedErrors);
+  }
 
-  if (!err.isOperational) {
+  // 2. Nếu là lỗi của Prisma
+  if (err.code == 'P2025') {
+    error = new AppError('Không tìm thấy dữ liệu yêu cầu', 404);
+  }
+
+  // Phân loại phản hồi
+  const statusCode = error.statusCode || 500;
+  const message = error.isOperational ? error.message : 'Internal Server Error';
+
+  if (!error.isOperational) {
     console.log('[ERROR]: ', err);
   }
 
   return res.status(statusCode).json({
     success: false,
     message,
-    errors: err.errors || null, // Nơi chứa chi tiết lỗi
+    errors: error.errors || null, // Nơi chứa chi tiết lỗi
   });
 };
