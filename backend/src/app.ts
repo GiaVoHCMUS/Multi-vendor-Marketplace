@@ -1,13 +1,18 @@
 import express, { Application } from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
-import { successResponse } from './utils/response';
-import { globalErrorHandler } from './middleware/global.middleware';
+import cookieParser from 'cookie-parser';
+import { successResponse } from './shared/utils/response';
+import { globalErrorHandler } from './shared/middleware/global.middleware';
+import authRoutes from './modules/auth/auth.routes';
 
-const app : Application = express();
+const app: Application = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Middleware để đọc cookie
+
+app.use('/api/auth', authRoutes);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
@@ -22,6 +27,6 @@ app.get('/health', (req, res) => {
 });
 
 // Global Error Middleware
-app.use(globalErrorHandler)
+app.use(globalErrorHandler);
 
 export default app;

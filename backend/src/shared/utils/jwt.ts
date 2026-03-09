@@ -35,9 +35,15 @@ export const tokenUtils = {
   },
 
   // Generate Refresh Token
-  generateRefreshToken(userId: string): string {
+  generateRefreshToken(
+    userId: string,
+    role: UserRole,
+    tokenId: string,
+  ): string {
     const payload: JwtRefreshPayload = {
       sub: userId,
+      role,
+      tokenId,
     };
 
     return jwt.sign(payload, JWT_REFRESH_SECRET, {
