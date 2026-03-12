@@ -1,6 +1,7 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
 import { JwtAccessPayload, JwtRefreshPayload } from '../types/auth';
+import { AppError } from './AppError';
 
 // Load env variable
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -56,7 +57,7 @@ export const tokenUtils = {
     try {
       return jwt.verify(token, JWT_SECRET) as JwtAccessPayload;
     } catch {
-      throw new Error('Invalid or expired access token');
+      throw new AppError('Access Token không hợp lệ hoặc hết hạn', 401);
     }
   },
 
@@ -65,7 +66,7 @@ export const tokenUtils = {
     try {
       return jwt.verify(token, JWT_REFRESH_SECRET) as JwtRefreshPayload;
     } catch {
-      throw new Error('Invalid or expired refresh token');
+      throw new AppError('Refresh Token không hợp lệ hoặc hết hạn', 401);
     }
   },
 };
