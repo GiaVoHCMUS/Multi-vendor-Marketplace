@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/AppError';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import multer from 'multer';
 
 export const globalErrorHandler = (
   err: any,
@@ -26,6 +26,17 @@ export const globalErrorHandler = (
   // 2. Nếu là lỗi của Prisma
   if (err.code == 'P2025') {
     error = new AppError('Không tìm thấy dữ liệu yêu cầu', 404);
+  }
+
+  // 3. Nếu là lỗi của Multer
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      error = new AppError('Dung lượng file quá lớn', 400)
+    }
+
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      error = new AppError('Quá nhiều files được tải lên', 400);
+    }
   }
 
   // Phân loại phản hồi
