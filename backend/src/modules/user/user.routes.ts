@@ -12,7 +12,7 @@ router.use(protect);
 router.get('/me', userController.getMe);
 router.patch(
   '/me',
-  upload.single('avatar'),
+  upload.single('avatars'),
   validate(userSchema.updateMe),
   userController.updateMe,
 );
