@@ -38,7 +38,25 @@ export const commonRules = {
     message: 'Số điện thoại Việt Nam không hợp lệ',
   }),
 
-  // Pagination cho Prisma 
+  provice: z
+    .string({ message: 'Nhập Tỉnh/Thành phố là bắt buộc' })
+    .trim()
+    .min(2, { message: 'Tỉnh/Thành phố không hợp lệ' }),
+
+  ward: z
+    .string({ message: 'Nhập Phường/Xã là bắt buộc' })
+    .trim()
+    .min(2, { message: 'Phường/Xã không hợp lệ' }),
+
+  detailAddress: z
+    .string({ message: 'Địa chỉ chi tiết là bắt buộc' })
+    .trim()
+    .min(5, { message: 'Địa chỉ quá ngắn' })
+    .max(255),
+
+  // Pagination cho Prisma
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
 };
+
+export const emptySchema = z.object({}).optional();
