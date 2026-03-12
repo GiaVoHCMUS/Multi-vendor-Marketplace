@@ -1,4 +1,4 @@
-import { prisma } from '@/config/prisma';
+import { prisma } from '@/core/config/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthResponse, TokenPayload } from '@/shared/types/auth';
 import { AppError } from '@/shared/utils/AppError';
@@ -55,6 +55,7 @@ export const authService = {
         role: user.role,
         fullName: user.fullName,
         avatarUrl: user.avatarUrl,
+        avatarPublicId: user.avatarPublicId,
         bio: user.bio,
         isVerified: user.isVerified,
         createdAt: user.createdAt,
