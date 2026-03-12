@@ -2,17 +2,19 @@
 import { z } from 'zod';
 import { commonRules } from '@/shared/schemas/common.schema';
 
-export const registerSchema = z.object({
-  body: z.object({
-    email: commonRules.email,
-    password: commonRules.password,
-    fullName: commonRules.fullName,
+export const authSchema = {
+  register: z.object({
+    body: z.object({
+      email: commonRules.email,
+      password: commonRules.password,
+      fullName: commonRules.fullName,
+    }),
   }),
-});
 
-export const loginSchema = z.object({
-  body: z.object({
-    email: commonRules.email,
-    password: commonRules.password,
+  login: z.object({
+    body: z.object({
+      email: commonRules.email,
+      password: commonRules.password,
+    }),
   }),
-});
+};
