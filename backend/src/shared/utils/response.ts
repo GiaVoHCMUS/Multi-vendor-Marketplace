@@ -1,15 +1,17 @@
 import { Response } from 'express';
 
-export const successResponse = <T>(
+export const successResponse = <T, M>(
   res: Response,
   statusCode: number,
   message: string,
   data?: T,
+  meta?: M,
 ) => {
   return res.status(statusCode).json({
     success: true,
     message,
     data: data ?? null,
+    meta: meta ?? null,
   });
 };
 
