@@ -52,7 +52,18 @@ export const commonRules = {
     .string({ message: 'Địa chỉ chi tiết là bắt buộc' })
     .trim()
     .min(5, { message: 'Địa chỉ quá ngắn' })
-    .max(255),
+    .max(255, { message: 'Đại chỉ quá dài' }),
+
+  shopName: z
+    .string({ message: 'Tên cửa hàng là bắt buộc' })
+    .trim()
+    .min(5, { message: 'Tên cửa hàng là quá ngắn' })
+    .max(255, { message: 'Tên cửa hàng quá dài' }),
+
+  shopDescription: z
+    .string()
+    .max(1000, { message: 'Mô tả về cửa hàng quá dài' })
+    .optional(),
 
   // Pagination cho Prisma
   page: z.coerce.number().int().min(1).default(1),

@@ -6,6 +6,7 @@ import { successResponse } from './shared/utils/response';
 import { globalErrorHandler } from './shared/middleware/error.middleware';
 import authRoutes from './modules/auth/auth.routes';
 import userRoutes from './modules/user/user.routes';
+import shopRoutes from './modules/shop/shop.routes';
 
 const app: Application = express();
 
@@ -15,6 +16,7 @@ app.use(cookieParser()); // Middleware để đọc cookie
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/shop', shopRoutes);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
