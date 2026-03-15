@@ -8,6 +8,7 @@ import authRoutes from './modules/auth/auth.routes';
 import userRoutes from './modules/user/user.routes';
 import shopRoutes from './modules/shop/shop.routes';
 import categoryRoutes from './modules/category/category.routes';
+import productRoutes from './modules/products/product.routes';
 
 const app: Application = express();
 
@@ -17,8 +18,9 @@ app.use(cookieParser()); // Middleware để đọc cookie
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/shop', shopRoutes);
+app.use('/api/shops', shopRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {

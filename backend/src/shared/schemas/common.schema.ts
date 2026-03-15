@@ -3,7 +3,7 @@ import { REGEX } from '../constants/regex.constants';
 
 export const commonRules = {
   // Định dạng ID của  UUID
-  id: z.string().regex(REGEX.UUID, 'ID không hợp lệ'),
+  id: z.string().pipe(z.uuid({ message: 'ID không đúng định dạng UUID' })),
   idInt: z.coerce.number().int(),
 
   // Email sạch sẽ
@@ -73,8 +73,8 @@ export const commonRules = {
 
 export const categoryRules = {
   name: z
-        .string({ message: 'Tên danh mục là bắt buộc' })
-        .min(2, { message: 'Tên danh mục phải có ít nhất 2 ký tự' }),
-}
+    .string({ message: 'Tên danh mục là bắt buộc' })
+    .min(2, { message: 'Tên danh mục phải có ít nhất 2 ký tự' }),
+};
 
 export const emptySchema = z.object({}).optional();
