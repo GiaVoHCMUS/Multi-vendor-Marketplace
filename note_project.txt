@@ -1,1 +1,3 @@
-
+Vấn đề 1: Khi trong api có upload file thì có thể xảy ra tình trạng 
+file đã được upload nhưng validate dữ liệu lỗi thì file đã nằm trên cloudinary
+-> làm cách nào để xóa lại file trên cloudinary

@@ -89,7 +89,6 @@ model Address {
   receiverName   String
   receiverPhone  String
   province       String
-  district       String
   ward           String
   detailAddress  String   @db.Text
   isDefault      Boolean  @default(false)
@@ -120,6 +119,7 @@ model Shop {
   products      Product[]
   orders        Order[]
 
+  @@index([ownerId, deletedAt])
   @@index([status, deletedAt])
   @@map("shops")
 }

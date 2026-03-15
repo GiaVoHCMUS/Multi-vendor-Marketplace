@@ -4,6 +4,7 @@ import { REGEX } from '../constants/regex.constants';
 export const commonRules = {
   // Định dạng ID của  UUID
   id: z.string().regex(REGEX.UUID, 'ID không hợp lệ'),
+  idInt: z.coerce.number().int(),
 
   // Email sạch sẽ
   email: z
@@ -69,5 +70,11 @@ export const commonRules = {
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
 };
+
+export const categoryRules = {
+  name: z
+        .string({ message: 'Tên danh mục là bắt buộc' })
+        .min(2, { message: 'Tên danh mục phải có ít nhất 2 ký tự' }),
+}
 
 export const emptySchema = z.object({}).optional();
