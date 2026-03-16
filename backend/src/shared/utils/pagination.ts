@@ -10,7 +10,7 @@ export const buildPagination = (query: PaginationQuery) => {
   if (query.cursor) {
     return {
       skip: 1,
-      take: limit,
+      take: limit + 1,
       cursor: {
         id: query.cursor,
       },
