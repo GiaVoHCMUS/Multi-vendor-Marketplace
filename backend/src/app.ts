@@ -10,6 +10,7 @@ import shopRoutes from './modules/shop/shop.routes';
 import categoryRoutes from './modules/category/category.routes';
 import productRoutes from './modules/products/product.routes';
 import cartRoutes from './modules/cart/cart.routes';
+import orderRoutes from './modules/order/order.routes';
 
 const app: Application = express();
 
@@ -23,6 +24,7 @@ app.use('/api/shops', shopRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
