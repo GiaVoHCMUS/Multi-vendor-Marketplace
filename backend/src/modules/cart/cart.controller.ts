@@ -46,8 +46,8 @@ export const cartController = {
   clearCart: catchAsync(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    await cartService.clearCart(userId);
+    const cart = await cartService.clearCart(userId);
 
-    successResponse(res, 200, 'Đã xóa toàn bộ giỏ hàng');
+    successResponse(res, 200, 'Đã xóa toàn bộ giỏ hàng', cart);
   }),
 };
