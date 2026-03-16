@@ -11,7 +11,7 @@ import categoryRoutes from './modules/category/category.routes';
 import productRoutes from './modules/products/product.routes';
 import cartRoutes from './modules/cart/cart.routes';
 import orderRoutes from './modules/order/order.routes';
-
+import adminRoutes from './modules/admin/admin.routes';
 const app: Application = express();
 
 app.use(express.json());
@@ -25,6 +25,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
