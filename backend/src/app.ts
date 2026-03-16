@@ -9,6 +9,7 @@ import userRoutes from './modules/user/user.routes';
 import shopRoutes from './modules/shop/shop.routes';
 import categoryRoutes from './modules/category/category.routes';
 import productRoutes from './modules/products/product.routes';
+import cartRoutes from './modules/cart/cart.routes';
 
 const app: Application = express();
 
@@ -21,6 +22,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/cart', cartRoutes);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
