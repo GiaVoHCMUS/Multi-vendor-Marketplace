@@ -2,6 +2,7 @@ import { redisClient } from '@/core/cache/redis';
 import { AddToCartInput } from './cart.type';
 import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 const redis = redisClient.getInstance();
 const CART_TTL = 7 * 24 * 60 * 60;
@@ -85,7 +86,7 @@ export const cartService = {
     });
 
     if (!product) {
-      throw new AppError('Sản phẩm không tồn tại', 404);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, 404);
     }
 
     const cartKey = getCartKey(userId);
@@ -94,7 +95,7 @@ export const cartService = {
     const newQty = Number(currentQty ?? 0) + item.quantity;
 
     if (newQty > product.stock) {
-      throw new AppError('Số lượng vượt quá tồn kho', 400);
+      throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, 400);
     }
 
     await redis.hIncrBy(getCartKey(userId), item.productId, item.quantity);
@@ -110,7 +111,7 @@ export const cartService = {
     const exists = await redis.hExists(cartKey, productId);
 
     if (!exists) {
-      throw new AppError('Sản phẩm không có trong giỏ hàng', 404);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, 404);
     }
 
     const product = await prisma.product.findFirst({
@@ -122,11 +123,11 @@ export const cartService = {
     });
 
     if (!product) {
-      throw new AppError('Sản phẩm không tồn tại trong giỏ hàng', 404);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, 404);
     }
 
     if (quantity > product.stock) {
-      throw new AppError('Số lượng vượt quá tồn kho', 400);
+      throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, 400);
     }
 
     await redis.hSet(cartKey, productId, quantity);
