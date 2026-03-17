@@ -4,6 +4,7 @@ import { ImageType } from '@/shared/types/image.type';
 import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const shopService = {
   getShopByOwner: async (ownerId: string) => {
@@ -15,7 +16,7 @@ export const shopService = {
     });
 
     if (!shop) {
-      throw new AppError('Không tìm thấy cửa hàng', 404);
+      throw new AppError(MESSAGE.SHOP.NOT_FOUND, 404);
     }
 
     return shop;
@@ -34,7 +35,7 @@ export const shopService = {
     });
 
     if (existingShop) {
-      throw new AppError('Bạn đã đăng ký cửa hàng rồi', 400);
+      throw new AppError(MESSAGE.SHOP.ALREADY_REGISTERED, 400);
     }
 
     const shop = await prisma.shop.create({
@@ -126,11 +127,11 @@ export const shopService = {
     });
 
     if (!order) {
-      throw new AppError('Không tìm thấy đơn hàng', 404);
+      throw new AppError(MESSAGE.SHOP.ORDER_NOT_FOUND, 404);
     }
 
     if (order.status === 'DELIVERED') {
-      throw new AppError('Đơn hàng đã hoàn tất', 400);
+      throw new AppError(MESSAGE.SHOP.ORDER_ALREADY_DELIVERED, 400);
     }
 
     const updatedOrder = await prisma.order.update({
