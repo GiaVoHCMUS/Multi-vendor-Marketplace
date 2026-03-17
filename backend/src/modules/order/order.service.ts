@@ -3,6 +3,7 @@ import { CheckoutInput } from './order.type';
 import { AppError } from '@/shared/utils/AppError';
 import { prisma } from '@/core/config/prisma';
 import { OrderStatus } from '@prisma/client';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 const redis = redisClient.getInstance();
 
@@ -32,7 +33,7 @@ export const orderService = {
     });
 
     if (products.length !== items.length) {
-      throw new AppError('Một số sản phẩm không hợp lệ', 400);
+      throw new AppError(MESSAGE.ORDER.INVALID_PRODUCTS, 400);
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -43,7 +44,7 @@ export const orderService = {
       const product = productMap.get(item.productId)!;
 
       if (item.quantity > product.stock) {
-        throw new AppError(`Sản phẩm ${product.name} không đủ tồn kho`, 400);
+        throw new AppError(MESSAGE.ORDER.INSUFFICIENT_STOCK, 400);
       }
 
       const price = Number(product.price);
@@ -204,7 +205,7 @@ export const orderService = {
     });
 
     if (!order) {
-      throw new AppError('Đơn hàng không tồn tại', 404);
+      throw new AppError(MESSAGE.ORDER.NOT_FOUND, 404);
     }
 
     return order;
@@ -223,14 +224,11 @@ export const orderService = {
     });
 
     if (!order) {
-      throw new AppError('Đơn hàng không tồn tại', 400);
+      throw new AppError(MESSAGE.ORDER.NOT_FOUND, 404);
     }
 
     if (order.shop.ownerId !== sellerId) {
-      throw new AppError(
-        'Bạn không có quyền thay đổi trạng thái đơn hàng này',
-        403,
-      );
+      throw new AppError(MESSAGE.ORDER.FORBIDDEN_UPDATE_STATUS, 403);
     }
 
     return prisma.order.update({

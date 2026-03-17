@@ -2,18 +2,19 @@ import { catchAsync } from '@/shared/utils/catchAsync';
 import { Request, Response } from 'express';
 import { orderService } from './order.service';
 import { successResponse } from '@/shared/utils/response';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const orderController = {
   checkout: catchAsync(async (req: Request, res: Response) => {
     const order = await orderService.checkout(req.user!.id, req.body);
 
-    successResponse(res, 201, 'Thanh toán thành công', order);
+    successResponse(res, 201, MESSAGE.ORDER.CHECKOUT_SUCCESS, order);
   }),
 
   getMyOrders: catchAsync(async (req: Request, res: Response) => {
     const orders = await orderService.getMyOrders(req.user!.id);
 
-    successResponse(res, 200, 'Lấy danh sách đơn hàng thành công', orders);
+    successResponse(res, 200, MESSAGE.ORDER.GET_LIST_SUCCESS, orders);
   }),
 
   getOrderDetail: catchAsync(async (req: Request, res: Response) => {
@@ -22,7 +23,7 @@ export const orderController = {
       req.params.id as string,
     );
 
-    successResponse(res, 200, 'Lấy chi tiết đơn hàng thành công', order);
+    successResponse(res, 200, MESSAGE.ORDER.GET_DETAIL_SUCCESS, order);
   }),
 
   updateOrderStatus: catchAsync(async (req: Request, res: Response) => {
@@ -32,6 +33,6 @@ export const orderController = {
       req.user!.id,
     );
 
-    successResponse(res, 200, 'Cập nhật trạng thái đơn hàng thành công', order);
+    successResponse(res, 200, MESSAGE.ORDER.UPDATE_STATUS_SUCCESS, order);
   }),
 };
