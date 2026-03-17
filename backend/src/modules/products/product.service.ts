@@ -9,31 +9,52 @@ import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { ProductStatus } from '@prisma/client';
+import { cacheService } from '@/core/cache/cache.service';
+import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 
 export const productService = {
+  async invalidateProductList() {
+    // Tăng version -> Mọi query list sau đó sẽ bị cache miss và lấy data mới từ DB
+    await cacheService.invalidateTracker(CACHE_KEYS.PRODUCT.TRACKER_LIST);
+  },
   async getAll(queryInput: ProductQueryInput) {
-    const limit = queryInput.limit;
+    const {
+      limit,
+      cursor,
+      categorySlug,
+      shopSlug,
+      search,
+      minPrice,
+      maxPrice,
+    } = queryInput;
 
     const [category, shop] = await Promise.all([
-      queryInput.categorySlug
-        ? prisma.category.findUnique({
-            where: { slug: queryInput.categorySlug },
-            select: { id: true },
-          })
+      categorySlug
+        ? cacheService.getOrSet(
+            CACHE_KEYS.CATEGORY.ID_BY_SLUG(categorySlug),
+            () =>
+              prisma.category.findUnique({
+                where: { slug: categorySlug },
+                select: { id: true },
+              }),
+            CACHE_TTL.LONG,
+          )
         : null,
 
-      queryInput.shopSlug
-        ? prisma.shop.findUnique({
-            where: { slug: queryInput.shopSlug },
-            select: { id: true },
-          })
+      shopSlug
+        ? cacheService.getOrSet(
+            CACHE_KEYS.SHOP.ID_BY_SLUG(shopSlug),
+            () =>
+              prisma.shop.findUnique({
+                where: { slug: shopSlug },
+                select: { id: true },
+              }),
+            CACHE_TTL.LONG,
+          )
         : null,
     ]);
 
-    if (
-      (queryInput.shopSlug && !shop) ||
-      (queryInput.categorySlug && !category)
-    ) {
+    if ((shopSlug && !shop) || (categorySlug && !category)) {
       return {
         data: [],
         meta: {
@@ -44,131 +65,169 @@ export const productService = {
       };
     }
 
-    const where: any = {
-      deletedAt: null,
-      status: ProductStatus.PUBLISHED,
-    };
+    // Lấy Versioning cho List Product
+    const version = await cacheService.getTracker(
+      CACHE_KEYS.PRODUCT.TRACKER_LIST,
+    );
 
-    // Search bằng contains của Prisma
-    if (queryInput.search) {
-      where.name = {
-        contains: queryInput.search,
-        mode: 'insensitive',
-      };
-    }
+    // Hàm Helper để sort object keys
+    const sortObject = (obj: any) =>
+      Object.keys(obj)
+        .sort()
+        .reduce((res: any, key) => {
+          res[key] = obj[key];
+          return res;
+        }, {});
 
-    // price
-    if (queryInput.minPrice || queryInput.maxPrice) {
-      where.price = {
-        gte: queryInput.minPrice,
-        lte: queryInput.maxPrice,
-      };
-    }
+    // Tạo unique key dựa trên các tham số filter và IDs
+    const cacheKey = CACHE_KEYS.PRODUCT.LIST(
+      version,
+      JSON.stringify(
+        sortObject({
+          ...queryInput,
+          categoryId: category?.id,
+          shopId: shop?.id,
+        }),
+      ),
+    );
 
-    // category
-    if (category) {
-      where.categoryId = category.id;
-    }
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const where: any = {
+          deletedAt: null,
+          status: ProductStatus.PUBLISHED,
+        };
 
-    // shop
-    if (shop) {
-      where.shopId = shop.id;
-    }
+        // Search bằng contains của Prisma
+        if (search) {
+          where.name = {
+            contains: search,
+            mode: 'insensitive',
+          };
+        }
 
-    // Query
-    const products = await prisma.product.findMany({
-      where,
-      orderBy: {
-        id: 'desc', // cursor-safe
-      },
-      take: limit + 1,
+        // price
+        if (minPrice || maxPrice) {
+          where.price = {
+            gte: minPrice,
+            lte: maxPrice,
+          };
+        }
 
-      cursor: queryInput.cursor ? { id: queryInput.cursor } : undefined,
-      skip: queryInput.cursor ? 1 : 0,
+        // category
+        if (category) {
+          where.categoryId = category.id;
+        }
 
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        price: true,
-        averageRating: true,
+        // shop
+        if (shop) {
+          where.shopId = shop.id;
+        }
 
-        images: {
-          take: 1,
-          orderBy: { order: 'asc' },
-          select: { url: true },
-        },
+        // Query
+        const products = await prisma.product.findMany({
+          where,
+          orderBy: {
+            id: 'desc', // cursor-safe
+          },
+          take: limit + 1,
 
-        shop: {
+          cursor: cursor ? { id: cursor } : undefined,
+          skip: cursor ? 1 : 0,
+
           select: {
             id: true,
             name: true,
             slug: true,
+            price: true,
+            averageRating: true,
+
+            images: {
+              take: 1,
+              orderBy: { order: 'asc' },
+              select: { url: true },
+            },
+
+            shop: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
           },
-        },
+        });
 
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+        // Pagination logic
+        const hasNext = products.length > limit;
+        const items = hasNext ? products.slice(0, -1) : products;
+
+        // Format data
+        const data = items.map((p) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          price: p.price,
+          averageRating: p.averageRating,
+          image: p.images[0]?.url || null,
+          shop: p.shop,
+          category: p.category,
+        }));
+
+        // Meta
+        return {
+          data,
+          meta: {
+            limit,
+            nextCursor: hasNext ? items[items.length - 1].id : null,
+
+            filters: {
+              search: search ?? null,
+              minPrice: minPrice ?? null,
+              maxPrice: maxPrice ?? null,
+              categorySlug: categorySlug ?? null,
+              shopSlug: shopSlug ?? null,
+            },
           },
-        },
+        };
       },
-    });
-
-    // Pagination logic
-    const hasNext = products.length > limit;
-    const items = hasNext ? products.slice(0, -1) : products;
-
-    // Format data
-    const data = items.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: p.price,
-      averageRating: p.averageRating,
-      image: p.images[0]?.url || null,
-      shop: p.shop,
-      category: p.category,
-    }));
-
-    // Meta
-    return {
-      data,
-      meta: {
-        limit,
-        nextCursor: hasNext ? items[items.length - 1].id : null,
-
-        filters: {
-          search: queryInput.search ?? null,
-          minPrice: queryInput.minPrice ?? null,
-          maxPrice: queryInput.maxPrice ?? null,
-          categorySlug: queryInput.categorySlug ?? null,
-          shopSlug: queryInput.shopSlug ?? null,
-        },
-      },
-    };
+      CACHE_TTL.SHORT,
+    );
   },
 
   getBySlug: async (slug: string) => {
-    const product = await prisma.product.findUnique({
-      where: { slug },
-      include: {
-        category: true,
-        shop: true,
-        reviews: true,
+    return cacheService.getOrSet(
+      CACHE_KEYS.PRODUCT.SLUG(slug),
+      async () => {
+        const product = await prisma.product.findUnique({
+          where: { slug },
+          include: {
+            category: true,
+            shop: true,
+            reviews: true,
+          },
+        });
+
+        if (!product) {
+          throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, 404);
+        }
+
+        return product;
       },
-    });
-
-    if (!product) {
-      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, 404);
-    }
-
-    return product;
+      CACHE_TTL.LONG,
+    );
   },
 
-  create: async (data: CreateProductInput, images: ImageType[]) => {
+  async create(data: CreateProductInput, images: ImageType[]) {
     const shop = await prisma.shop.findFirst({
       where: {
         id: data.shopId,
@@ -200,6 +259,8 @@ export const productService = {
 
     const newSlug = slug.generate(data.name);
 
+    await this.invalidateProductList();
+
     return prisma.product.create({
       data: {
         name: data.name,
@@ -227,11 +288,7 @@ export const productService = {
     });
   },
 
-  update: async (
-    id: string,
-    data: UpdateProductInput,
-    images?: ImageType[],
-  ) => {
+  async update(id: string, data: UpdateProductInput, images?: ImageType[]) {
     const product = await prisma.product.findUnique({
       where: { id },
       include: { images: true },
@@ -241,7 +298,7 @@ export const productService = {
       throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, 404);
     }
 
-    return prisma.product.update({
+    const updatedProduct = await prisma.product.update({
       where: { id },
 
       data: {
@@ -272,9 +329,16 @@ export const productService = {
         shop: true,
       },
     });
+
+    await Promise.all([
+      this.invalidateProductList(),
+      cacheService.delete(CACHE_KEYS.PRODUCT.SLUG(product.slug)),
+    ]);
+
+    return updatedProduct;
   },
 
-  delete: async (id: string) => {
+  async delete(id: string) {
     const product = await prisma.product.findUnique({
       where: { id },
     });
@@ -286,5 +350,10 @@ export const productService = {
     await prisma.product.delete({
       where: { id },
     });
+
+    await Promise.all([
+      this.invalidateProductList(),
+      cacheService.delete(CACHE_KEYS.PRODUCT.SLUG(product.slug)),
+    ]);
   },
 };
