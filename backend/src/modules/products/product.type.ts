@@ -7,3 +7,6 @@ export type CreateProductInput = z.infer<
 export type UpdateProductInput = z.infer<
   typeof productSchema.update.shape.body
 >;
+export type ProductQueryInput = z.infer<
+  typeof productSchema.productQuery.shape.query
+>;

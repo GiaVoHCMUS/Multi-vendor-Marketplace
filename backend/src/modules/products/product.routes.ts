@@ -8,7 +8,7 @@ import { validateProductImages } from '@/shared/middleware/validateImage.middlwa
 
 const router = Router();
 
-router.get('/', productController.getAll);
+router.get('/', validate(productSchema.productQuery), productController.getAll);
 router.get('/:slug', productController.getBySlug);
 
 router.use(protect);

@@ -1,4 +1,5 @@
 import { commonRules, emptySchema } from '@/shared/schemas/common.schema';
+import { ProductStatus } from '@prisma/client';
 import { z } from 'zod';
 
 const productBaseSchema = z.object({
@@ -28,12 +29,49 @@ const productBaseSchema = z.object({
     })
     .min(0, { message: 'Số lượng tồn kho của sản phẩm phải không âm' }),
 
-  status: z.enum(['DRAFT', 'PUBLISHED', 'OUT_OF_STOCK'], {
+  status: z.enum(ProductStatus, {
     message: 'Trạng thái sản phẩm không hợp lệ',
   }),
 });
 
 export const productSchema = {
+  productQuery: z.object({
+    body: emptySchema,
+    query: z
+      .object({
+        limit: commonRules.limit,
+        cursor: commonRules.cursor,
+        search: z
+          .string()
+          .trim()
+          .min(1, { message: 'Nội dung tìm kiếm không hợp lệ' })
+          .max(100, { message: 'Nội dung tìm kiếm quá dài' })
+          .optional(),
+
+        minPrice: z.coerce
+          .number()
+          .min(0, { message: 'Giá tối thiểu phải >= 0' })
+          .optional(),
+
+        maxPrice: z.coerce
+          .number()
+          .min(0, { message: 'Giá tối đa phải >= 0' })
+          .optional(),
+
+        categorySlug: z.string().optional(),
+
+        shopSlug: z.string().optional(),
+      })
+      .refine(
+        (data) =>
+          !data.minPrice || !data.maxPrice || data.minPrice <= data.maxPrice,
+        {
+          message: 'minPrice phải <= maxPrice',
+          path: ['minPrice'],
+        },
+      ),
+    params: emptySchema,
+  }),
   create: z.object({
     body: productBaseSchema,
     query: emptySchema,
