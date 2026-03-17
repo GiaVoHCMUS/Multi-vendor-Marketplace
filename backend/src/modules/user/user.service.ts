@@ -6,6 +6,7 @@ import {
 } from './user.type';
 import { ImageType } from '@/shared/types/image.type';
 import { AppError } from '@/shared/utils/AppError';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const userService = {
   getMe: async (userId: string) => {
@@ -79,7 +80,7 @@ export const userService = {
     });
 
     if (!address) {
-      throw new AppError('Không tìm thấy địa chỉ', 404);
+      throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, 404);
     }
 
     if (data.isDefault) {
@@ -105,7 +106,7 @@ export const userService = {
     });
 
     if (!address) {
-      throw new AppError('Không tìm thấy địa chỉ', 404);
+      throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, 404);
     }
 
     return prisma.address.delete({
