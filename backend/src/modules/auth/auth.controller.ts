@@ -4,6 +4,7 @@ import { successResponse } from '../../shared/utils/response';
 import { authService } from './auth.service';
 import { AppError } from '@/shared/utils/AppError';
 import { refreshTokenCookieOptions } from '@/shared/utils/cookie';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const authController = {
   register: catchAsync(async (req: Request, res: Response) => {
@@ -14,7 +15,7 @@ export const authController = {
 
     res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
 
-    successResponse(res, 201, 'Đăng ký tài khoản thành công', {
+    successResponse(res, 201, MESSAGE.AUTH.REGISTER_SUCCESS, {
       user,
       accessToken,
     });
@@ -27,7 +28,7 @@ export const authController = {
     const { refreshToken, accessToken, user } = result;
 
     res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
-    successResponse(res, 200, 'Đăng nhập thành công', {
+    successResponse(res, 200, MESSAGE.AUTH.LOGIN_SUCCESS, {
       user,
       accessToken,
     });
@@ -46,21 +47,21 @@ export const authController = {
       path: '/api/auth/refresh-token',
     });
 
-    successResponse(res, 200, 'Đăng xuất thành công');
+    successResponse(res, 200, MESSAGE.AUTH.LOGOUT_SUCCESS);
   }),
 
   refreshToken: catchAsync(async (req: Request, res: Response) => {
     const refreshToken: string = req.cookies.refreshToken;
 
     if (!refreshToken) {
-      throw new AppError('Refresh token không tồn tại', 401);
+      throw new AppError(MESSAGE.AUTH.REFRESH_TOKEN_NOT_FOUND, 401);
     }
 
     const tokens = await authService.refreshToken(refreshToken);
 
     res.cookie('refreshToken', tokens.refreshToken, refreshTokenCookieOptions);
 
-    successResponse(res, 200, 'Lấy token mới thành công', {
+    successResponse(res, 200, MESSAGE.AUTH.REFRESH_TOKEN_SUCCESS, {
       accessToken: tokens.accessToken,
     });
   }),

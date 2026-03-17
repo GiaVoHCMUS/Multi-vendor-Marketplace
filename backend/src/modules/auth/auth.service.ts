@@ -6,6 +6,7 @@ import { tokenUtils } from '@/shared/utils/jwt';
 import bcrypt from 'bcrypt';
 import { UserRole } from '@prisma/client';
 import { sessionService } from '@/core/cache/session.service';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 const RT_EXPIRES_IN_DAYS = 14;
 const RT_TTL = RT_EXPIRES_IN_DAYS * 24 * 60 * 60;
@@ -34,7 +35,7 @@ export const authService = {
   ): Promise<AuthResponse> => {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      throw new AppError('Email đã tồn tại', 400);
+      throw new AppError(MESSAGE.AUTH.EMAIL_ALREADY_EXISTS, 400);
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
@@ -70,7 +71,7 @@ export const authService = {
       where: { email, deletedAt: null },
     });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new AppError('Email hoặc mật khẩu không chính xác', 401);
+      throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, 401);
     }
 
     const tokens = await authService.generateAndStoreTokens(user.id, user.role);
@@ -105,13 +106,13 @@ export const authService = {
 
     // Trường hợp 1: Token đã bị xóa hoặc hết hạn
     if (!savedToken) {
-      throw new AppError('Phiên đăng nhập hết hạn', 401);
+      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, 401);
     }
 
     // Trường hợp 2: Token cũ bị dùng lại
     if (savedToken !== oldRefreshToken) {
       await sessionService.deleteAllSessions(userId);
-      throw new AppError('Cảnh báo bảo mật: Vui lòng đăng nhập lại.', 403);
+      throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, 403);
     }
 
     await sessionService.deleteSession(userId, tokenId);
