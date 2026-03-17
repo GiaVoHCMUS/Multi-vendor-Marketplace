@@ -3,6 +3,7 @@ import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.type';
 import { ImageType } from '@/shared/types/image.type';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const categoryService = {
   getAll: async () => {
@@ -23,7 +24,7 @@ export const categoryService = {
     });
 
     if (!category) {
-      throw new AppError('Không tìm thấy danh mục', 404);
+      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
     }
 
     return category;
@@ -53,7 +54,7 @@ export const categoryService = {
     });
 
     if (!category) {
-      throw new AppError('Danh mục không tồn tại', 404);
+      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
     }
 
     return prisma.category.update({
@@ -74,7 +75,7 @@ export const categoryService = {
     });
 
     if (!category) {
-      throw new AppError('Danh mục không tồn tại', 404);
+      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
     }
 
     await prisma.category.delete({

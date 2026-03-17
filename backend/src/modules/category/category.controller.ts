@@ -4,18 +4,19 @@ import { categoryService } from './category.service';
 import { successResponse } from '@/shared/utils/response';
 import { ImageType } from '@/shared/types/image.type';
 import { imageService } from '@/shared/services/image.service';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const categoryController = {
   getAllCategories: catchAsync(async (req: Request, res: Response) => {
     const categories = await categoryService.getAll();
 
-    successResponse(res, 200, 'Lấy danh sách danh mục thành công', categories);
+    successResponse(res, 200, MESSAGE.CATEGORY.GET_LIST_SUCCESS, categories);
   }),
 
   getCategoryBySlug: catchAsync(async (req: Request, res: Response) => {
     const category = await categoryService.getBySlug(req.params.slug as string);
 
-    successResponse(res, 200, 'Lấy danh mục thành công', category);
+    successResponse(res, 200, MESSAGE.CATEGORY.GET_DETAIL_SUCCESS, category);
   }),
 
   create: catchAsync(async (req: Request, res: Response) => {
@@ -30,7 +31,7 @@ export const categoryController = {
 
     const category = await categoryService.create(req.body, categoryUrl);
 
-    successResponse(res, 201, 'Tạo mới danh mục thành công', category);
+    successResponse(res, 201, MESSAGE.CATEGORY.CREATED_SUCCESS, category);
   }),
 
   update: catchAsync(async (req: Request, res: Response) => {
@@ -49,12 +50,12 @@ export const categoryController = {
       categoryUrl,
     );
 
-    successResponse(res, 200, 'Cập nhật danh mục thành công', category);
+    successResponse(res, 200, MESSAGE.CATEGORY.UPDATED_SUCCESS, category);
   }),
 
   delete: catchAsync(async (req: Request, res: Response) => {
     await categoryService.delete(Number(req.params.id));
 
-    successResponse(res, 200, 'Xóa danh mục thành công');
+    successResponse(res, 200, MESSAGE.CATEGORY.DELETED_SUCCESS);
   }),
 };
