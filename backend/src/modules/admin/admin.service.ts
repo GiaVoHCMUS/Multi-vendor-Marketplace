@@ -3,6 +3,7 @@ import { AppError } from '@/shared/utils/AppError';
 import { PaginationQuery } from './admin.type';
 import { buildPagination } from '@/shared/utils/pagination';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
+import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const adminService = {
   async approveShop(shopId: string) {
@@ -11,11 +12,11 @@ export const adminService = {
     });
 
     if (!shop) {
-      throw new AppError('Cửa hàng không tồn tại', 404);
+      throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, 404);
     }
 
     if (shop.status === 'ACTIVE') {
-      throw new AppError('Cửa hàng đã được duyệt', 400);
+      throw new AppError(MESSAGE.ADMIN.SHOP_ALREADY_APPROVED, 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -43,7 +44,7 @@ export const adminService = {
     });
 
     if (!shop) {
-      throw new AppError('Cửa hàng không tồn tại', 404);
+      throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, 404);
     }
 
     return prisma.shop.update({
@@ -60,7 +61,7 @@ export const adminService = {
     });
 
     if (!user) {
-      throw new AppError('Người dùng không tồn tại', 404);
+      throw new AppError(MESSAGE.ADMIN.USER_NOT_FOUND, 404);
     }
 
     return prisma.user.update({
