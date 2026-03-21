@@ -41,6 +41,10 @@ export const CACHE_KEYS = {
   ORDER: {
     DETAIL: (id: string | number) => `${PREFIX}:orders:detail:id_${id}`,
   },
+
+  ADMIN: {
+    DASHBOARD: `${PREFIX}:admin:dashboard`,
+  },
 };
 
 /**

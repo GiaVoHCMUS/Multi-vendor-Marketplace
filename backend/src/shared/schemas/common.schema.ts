@@ -69,6 +69,7 @@ export const commonRules = {
   // Pagination cho Prisma
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
+  cursor: z.string().pipe(z.uuid({ message: 'ID không đúng định dạng UUID' })).optional(),
 };
 
 export const categoryRules = {

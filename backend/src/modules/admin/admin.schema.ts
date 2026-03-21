@@ -42,7 +42,7 @@ export const adminSchema = {
     query: z.object({
       page: commonRules.page,
       limit: commonRules.limit,
-      search: z.string().optional(),
+      search: z.string().trim().optional(),
     }),
   }),
 
