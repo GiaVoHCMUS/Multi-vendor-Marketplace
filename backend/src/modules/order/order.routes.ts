@@ -7,7 +7,7 @@ import { orderSchema } from './order.schema';
 const router = Router();
 
 router.use(protect);
-router.get('/', orderController.getMyOrders);
+router.get('/', validate(orderSchema.getMyOrder), orderController.getMyOrders);
 router.post('/', validate(orderSchema.checkout), orderController.checkout);
 router.get(
   '/:id',

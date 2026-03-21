@@ -3,6 +3,14 @@ import { OrderStatus, PaymentMethod } from '@prisma/client';
 import { z } from 'zod';
 
 export const orderSchema = {
+  getMyOrder: z.object({
+    body: emptySchema,
+    query: z.object({
+      status: z.enum(OrderStatus).optional(),
+    }),
+    params: emptySchema,
+  }),
+
   checkout: z.object({
     body: z.object({
       paymentMethod: z.enum(PaymentMethod),

@@ -12,7 +12,7 @@ export const orderController = {
   }),
 
   getMyOrders: catchAsync(async (req: Request, res: Response) => {
-    const orders = await orderService.getMyOrders(req.user!.id);
+    const orders = await orderService.getMyOrders(req.user!.id, req.query);
 
     successResponse(res, 200, MESSAGE.ORDER.GET_LIST_SUCCESS, orders);
   }),

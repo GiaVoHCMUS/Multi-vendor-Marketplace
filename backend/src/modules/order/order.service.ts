@@ -2,8 +2,10 @@ import { redisClient } from '@/core/cache/redis';
 import { CheckoutInput } from './order.type';
 import { AppError } from '@/shared/utils/AppError';
 import { prisma } from '@/core/config/prisma';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, ProductStatus } from '@prisma/client';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
+import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 
 const redis = redisClient.getInstance();
 
@@ -28,7 +30,7 @@ export const orderService = {
       where: {
         id: { in: productIds },
         deletedAt: null,
-        status: 'PUBLISHED',
+        status: ProductStatus.PUBLISHED,
       },
     });
 
@@ -125,48 +127,112 @@ export const orderService = {
     return result;
   },
 
-  async getMyOrders(userId: string) {
-    return prisma.order.findMany({
-      where: { orderGroup: { userId } },
+  // async getMyOrders(userId: string) {
+  //   return prisma.order.findMany({
+  //     where: { orderGroup: { userId } },
 
-      include: {
-        shop: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+  //     include: {
+  //       shop: {
+  //         select: {
+  //           id: true,
+  //           name: true,
+  //           slug: true,
+  //         },
+  //       },
+
+  //       orderItems: {
+  //         include: {
+  //           product: {
+  //             select: {
+  //               id: true,
+  //               name: true,
+  //               slug: true,
+  //               price: true,
+  //               images: {
+  //                 take: 1,
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+
+  //       orderGroup: {
+  //         select: {
+  //           paymentStatus: true,
+  //           paymentMethod: true,
+  //           createdAt: true,
+  //         },
+  //       },
+  //     },
+
+  //     orderBy: {
+  //       createdAt: 'desc',
+  //     },
+  //   });
+  // },
+
+  async getMyOrders(userId: string, query: any) {
+    const { prismaArgs, meta } = new PrismaQueryHelper(query)
+      .paginate()
+      .applyFilter((q) => ({
+        ...(q.status && { status: q.status }),
+        orderGroup: { userId },
+      }))
+      .sort()
+      .build();
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        ...prismaArgs,
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
-        },
-
-        orderItems: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                price: true,
-                images: {
-                  take: 1,
+          orderItems: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  price: true,
+                  images: {
+                    take: 1,
+                  },
                 },
               },
             },
           },
-        },
-
-        orderGroup: {
-          select: {
-            paymentStatus: true,
-            paymentMethod: true,
-            createdAt: true,
+          orderGroup: {
+            select: {
+              paymentStatus: true,
+              paymentMethod: true,
+              createdAt: true,
+            },
           },
         },
-      },
+        orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
+      }),
 
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+      prisma.order.count({ where: prismaArgs.where }),
+    ]);
+
+    if (!meta || meta.type !== 'offset') {
+      throw new AppError('Phân trang không hợp lệ', 400);
+    }
+
+    return {
+      data: orders,
+      meta: buildOffsetMeta({
+        totalItems: total,
+        page: meta.page,
+        limit: meta.limit,
+      }),
+    };
   },
 
   async getOrderDetail(userId: string, orderId: string) {
