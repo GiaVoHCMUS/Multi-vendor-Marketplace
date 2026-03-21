@@ -4,36 +4,58 @@ import { slug } from '@/shared/utils/slug';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.type';
 import { ImageType } from '@/shared/types/image.type';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { cacheService } from '@/core/cache/cache.service';
+import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 
 export const categoryService = {
-  getAll: async () => {
-    return prisma.category.findMany({
-      orderBy: { id: 'asc' },
-      include: {
-        children: true,
-      },
-    });
+  async invalidateCategoryList() {
+    await cacheService.invalidateTracker(CACHE_KEYS.CATEGORY.TRACKER_LIST);
   },
 
-  getBySlug: async (slug: string) => {
-    const category = await prisma.category.findUnique({
-      where: { slug },
-      include: {
-        products: true,
+  async getAll() {
+    const version = await cacheService.getTracker(
+      CACHE_KEYS.CATEGORY.TRACKER_LIST,
+    );
+
+    const cacheKey = CACHE_KEYS.CATEGORY.LIST(version);
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return prisma.category.findMany({
+          orderBy: { id: 'desc' },
+          include: {
+            children: true,
+          },
+        });
       },
-    });
-
-    if (!category) {
-      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
-    }
-
-    return category;
+      CACHE_TTL.WEEK,
+    );
   },
 
-  create: async (data: CreateCategoryInput, imageUrl?: ImageType) => {
+  async getBySlug(slug: string) {
+    const cacheKey = CACHE_KEYS.CATEGORY.SLUG(slug);
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const category = await prisma.category.findUnique({
+          where: { slug },
+        });
+        if (!category) {
+          throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
+        }
+
+        return category;
+      },
+      CACHE_TTL.WEEK,
+    );
+  },
+
+  async create(data: CreateCategoryInput, imageUrl?: ImageType) {
     const newSlug = slug.generate(data.name);
 
-    return prisma.category.create({
+    const category = await prisma.category.create({
       data: {
         name: data.name,
         slug: newSlug,
@@ -42,13 +64,13 @@ export const categoryService = {
         imagePublicId: imageUrl?.publicId ?? null,
       },
     });
+
+    await this.invalidateCategoryList();
+
+    return category;
   },
 
-  update: async (
-    id: number,
-    data: UpdateCategoryInput,
-    imageUrl?: ImageType,
-  ) => {
+  async update(id: number, data: UpdateCategoryInput, imageUrl?: ImageType) {
     const category = await prisma.category.findUnique({
       where: { id },
     });
@@ -57,7 +79,7 @@ export const categoryService = {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
     }
 
-    return prisma.category.update({
+    const updatedCategory = await prisma.category.update({
       where: { id },
       data: {
         name: data.name ?? category.name,
@@ -67,9 +89,13 @@ export const categoryService = {
         parentId: data.parentId ?? category.parentId,
       },
     });
+
+    await this.invalidateCategoryList();
+
+    return updatedCategory;
   },
 
-  delete: async (id: number) => {
+  async delete(id: number) {
     const category = await prisma.category.findUnique({
       where: { id },
     });
@@ -81,5 +107,7 @@ export const categoryService = {
     await prisma.category.delete({
       where: { id },
     });
+
+    await this.invalidateCategoryList();
   },
 };

@@ -23,10 +23,13 @@ export const CACHE_KEYS = {
   CATEGORY: {
     TRACKER_LIST: `${PREFIX}:categories:tracker:list`,
     LIST: (version: string) => `${PREFIX}:categories:v${version}:list`,
+    // Đổi từ slug thành id -> Phục vụ cho việc truy vấn ở Products
     ID_BY_SLUG: (slug: string) => `${PREFIX}:categories:slug:${slug}`,
+    SLUG: (slug: string) => `${PREFIX}:categories:slug:${slug}`,
   },
 
   SHOP: {
+    // Đổi từ slug thành id -> Phục vụ cho việc truy vấn ở Products
     ID_BY_SLUG: (slug: string) => `${PREFIX}:shops:slug:${slug}`,
     DETAIL: (id: string | number) => `${PREFIX}:shops:detail:id_${id}`,
     ANALYTICS: (id: string | number) => `${PREFIX}:shops:analytics:id_${id}`,
