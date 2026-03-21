@@ -7,6 +7,8 @@ import {
 import { ImageType } from '@/shared/types/image.type';
 import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { cacheService } from '@/core/cache/cache.service';
+import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 
 export const userService = {
   getMe: async (userId: string) => {
@@ -37,15 +39,20 @@ export const userService = {
   },
 
   getAddresses: async (userId: string) => {
-    // Lấy danh sách địa chỉ
-    const addresses = await prisma.address.findMany({
-      where: { userId },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const cacheKey = CACHE_KEYS.USER.ADDRESS_LIST(userId);
 
-    return addresses;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return prisma.address.findMany({
+          where: { userId },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+      },
+      CACHE_TTL.MEDIUM,
+    );
   },
 
   createAddress: async (userId: string, data: CreateAddressInput) => {
@@ -63,6 +70,9 @@ export const userService = {
         ...data,
       },
     });
+
+    await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
+
     return address;
   },
 
@@ -90,6 +100,8 @@ export const userService = {
       });
     }
 
+    await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
+
     return prisma.address.update({
       where: { id: addressId },
       data,
@@ -108,6 +120,8 @@ export const userService = {
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, 404);
     }
+
+    await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
     return prisma.address.delete({
       where: { id: addressId },

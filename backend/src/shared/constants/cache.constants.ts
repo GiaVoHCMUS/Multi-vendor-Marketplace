@@ -36,8 +36,8 @@ export const CACHE_KEYS = {
   },
 
   USER: {
-    PROFILE: (id: string | number) => `${PREFIX}:users:profile:id_${id}`,
-    ADDRESS_LIST: (userId: string | number) =>
+    PROFILE: (id: string) => `${PREFIX}:users:profile:id_${id}`,
+    ADDRESS_LIST: (userId: string) =>
       `${PREFIX}:users:addresses:uid_${userId}`,
   },
 
