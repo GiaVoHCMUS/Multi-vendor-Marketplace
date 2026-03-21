@@ -1,24 +1,38 @@
-export const buildOffsetMeta = (page: number, limit: number, total: number) => {
-  const totalPages = Math.ceil(total / limit);
-
+export const buildOffsetMeta = ({
+  totalItems,
+  page,
+  limit,
+}: {
+  totalItems: number;
+  page: number;
+  limit: number;
+}) => {
   return {
-    page,
+    totalItems,
+    totalPages: Math.ceil(totalItems / limit),
+    currentPage: page,
     limit,
-    total,
-    totalPages,
-    hasNext: page < totalPages,
-    hasPrev: page > 1,
   };
 };
 
-export const buildCursorMeta = <T extends { id: string }>(
-  items: T[],
-  limit: number,
-) => {
-  const hasNext = items.length > limit;
-  
+export const buildCursorMeta = <T>({
+  data,
+  limit,
+  cursorField,
+}: {
+  data: T[];
+  limit: number;
+  cursorField: keyof T;
+}) => {
+  const hasNext = data.length > limit;
+
+  const nextCursor = hasNext
+    ? (data[data.length - 1] as any)[cursorField]
+    : null;
+
   return {
+    nextCursor,
+    hasNext,
     limit,
-    nextCursor: hasNext ? items[items.length - 1].id : null,
   };
 };
