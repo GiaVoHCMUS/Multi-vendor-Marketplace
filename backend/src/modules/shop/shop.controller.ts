@@ -41,11 +41,9 @@ export const shopController = {
   }),
 
   getShopOrders: catchAsync(async (req: Request, res: Response) => {
-    const { cursor, limit } = req.query;
     const { data, meta } = await shopService.getShopOrders(
       req.user!.id,
-      cursor as string,
-      Number(limit) || 10,
+      req.query,
     );
 
     successResponse(res, 200, MESSAGE.SHOP.GET_ORDERS_SUCCESS, data, meta);

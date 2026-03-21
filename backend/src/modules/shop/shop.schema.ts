@@ -28,4 +28,34 @@ export const shopSchema = {
     query: emptySchema,
     params: commonRules.id,
   }),
+
+  getShopOrders: z.object({
+    body: emptySchema,
+    query: z
+      .object({
+        status: z.enum(OrderStatus).optional(),
+        fromDate: z
+          .string()
+          .pipe(z.coerce.date({ message: 'Ngày bắt đầu không đúng định dạng' }))
+          .optional(),
+
+        toDate: z
+          .string()
+          .pipe(z.coerce.date({ message: 'Ngày kết thúc không đúng định dạng' }))
+          .optional(),
+      })
+      .refine(
+        (data) => {
+          if (data.fromDate && data.toDate) {
+            return data.fromDate <= data.toDate;
+          }
+          return true;
+        },
+        {
+          message: 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc',
+          path: ['fromDate'],
+        },
+      ),
+    params: emptySchema,
+  }),
 };

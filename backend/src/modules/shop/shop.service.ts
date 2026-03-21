@@ -1,13 +1,17 @@
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, ShopStatus } from '@prisma/client';
 import { RegisterShopInput, UpdateMyShopInput } from './shop.type';
 import { ImageType } from '@/shared/types/image.type';
 import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
+import { buildOffsetMeta } from '@/shared/utils/buildMeta';
+import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
+import { cacheService } from '@/core/cache/cache.service';
 
 export const shopService = {
-  getShopByOwner: async (ownerId: string) => {
+  async getShopByOwner(ownerId: string) {
     const shop = await prisma.shop.findFirst({
       where: {
         ownerId,
@@ -22,11 +26,7 @@ export const shopService = {
     return shop;
   },
 
-  register: async (
-    userId: string,
-    data: RegisterShopInput,
-    logoUrl?: ImageType,
-  ) => {
+  async register(userId: string, data: RegisterShopInput, logoUrl?: ImageType) {
     const existingShop = await prisma.shop.findFirst({
       where: {
         ownerId: userId,
@@ -46,24 +46,24 @@ export const shopService = {
         ownerId: userId,
         logoUrl: logoUrl?.url,
         logoPublicId: logoUrl?.publicId,
-        status: 'PENDING',
+        status: ShopStatus.PENDING,
       },
     });
 
     return shop;
   },
 
-  getMyShop: async (ownerId: string) => {
+  async getMyShop(ownerId: string) {
     const shop = await shopService.getShopByOwner(ownerId);
 
     return shop;
   },
 
-  updateMyShop: async (
+  async updateMyShop(
     ownerId: string,
     data: UpdateMyShopInput,
     logoUrl?: ImageType,
-  ) => {
+  ) {
     const shop = await shopService.getShopByOwner(ownerId);
 
     const updatedShop = await prisma.shop.update({
@@ -80,43 +80,74 @@ export const shopService = {
     return updatedShop;
   },
 
-  getShopOrders: async (
-    ownerId: string,
-    cursor?: string,
-    limit: number = 10,
-  ) => {
+  async getShopOrders(ownerId: string, query: any) {
     const shop = await shopService.getShopByOwner(ownerId);
 
-    const orders = await prisma.order.findMany({
-      where: { shopId: shop.id },
-      take: limit + 1,
-      ...(cursor && {
-        cursor: { id: cursor },
-        skip: 1,
-      }),
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    });
+    const { prismaArgs, meta } = new PrismaQueryHelper(query)
+      .paginate()
+      .applyFilter((q) => ({
+        shopId: shop.id,
+        ...(q.status && { status: q.status }),
+        ...(q.fromDate &&
+          q.toDate && {
+            createdAt: {
+              gte: new Date(q.fromDate),
+              lte: new Date(q.toDate),
+            },
+          }),
+      }))
+      .sort()
+      .build();
 
-    let nextCursor: string | null = null;
-    if (orders.length > limit) {
-      const nextItem = orders.pop();
-      nextCursor = nextItem!.id;
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        ...prismaArgs,
+        include: {
+          orderItems: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
+          orderGroup: {
+            select: {
+              userId: true,
+              paymentStatus: true,
+              paymentMethod: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
+      }),
+
+      prisma.order.count({ where: prismaArgs.where }),
+    ]);
+
+    if (!meta || meta.type !== 'offset') {
+      throw new AppError('Phân trang không hợp lệ', 400);
     }
 
     return {
       data: orders,
-      meta: {
-        nextCursor,
-        limit,
-      },
+      meta: buildOffsetMeta({
+        totalItems: total,
+        page: meta.page,
+        limit: meta.limit,
+      }),
     };
   },
 
-  updateOrderStatus: async (
+  async updateOrderStatus(
     ownerId: string,
     orderId: string,
     status: OrderStatus,
-  ) => {
+  ) {
     const shop = await shopService.getShopByOwner(ownerId);
 
     const order = await prisma.order.findFirst({
@@ -130,7 +161,7 @@ export const shopService = {
       throw new AppError(MESSAGE.SHOP.ORDER_NOT_FOUND, 404);
     }
 
-    if (order.status === 'DELIVERED') {
+    if (order.status === OrderStatus.DELIVERED) {
       throw new AppError(MESSAGE.SHOP.ORDER_ALREADY_DELIVERED, 400);
     }
 
@@ -144,36 +175,44 @@ export const shopService = {
     return updatedOrder;
   },
 
-  getShopAnalytics: async (ownerId: string) => {
+  async getShopAnalytics(ownerId: string) {
     const shop = await shopService.getShopByOwner(ownerId);
 
-    const [totalOrders, deliveredOrders, revenue] = await Promise.all([
-      prisma.order.count({
-        where: { shopId: shop.id },
-      }),
+    const cacheKey = CACHE_KEYS.SHOP.ANALYTICS(shop.id);
 
-      prisma.order.count({
-        where: {
-          shopId: shop.id,
-          status: 'DELIVERED',
-        },
-      }),
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const [totalOrders, deliveredOrders, revenue] = await Promise.all([
+          prisma.order.count({
+            where: { shopId: shop.id },
+          }),
 
-      prisma.order.aggregate({
-        where: {
-          shopId: shop.id,
-          status: 'DELIVERED',
-        },
-        _sum: {
-          totalAmount: true,
-        },
-      }),
-    ]);
+          prisma.order.count({
+            where: {
+              shopId: shop.id,
+              status: OrderStatus.DELIVERED,
+            },
+          }),
 
-    return {
-      totalOrders,
-      deliveredOrders,
-      revenue: revenue._sum.totalAmount ?? 0,
-    };
+          prisma.order.aggregate({
+            where: {
+              shopId: shop.id,
+              status: OrderStatus.DELIVERED,
+            },
+            _sum: {
+              totalAmount: true,
+            },
+          }),
+        ]);
+
+        return {
+          totalOrders,
+          deliveredOrders,
+          revenue: revenue._sum.totalAmount ?? 0,
+        };
+      },
+      CACHE_TTL.TINY,
+    );
   },
 };

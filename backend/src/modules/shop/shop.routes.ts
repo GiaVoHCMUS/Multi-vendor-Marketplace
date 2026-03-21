@@ -23,7 +23,11 @@ router.patch(
   validate(shopSchema.updateMyShop),
   shopController.updateMyShop,
 );
-router.get('/orders', shopController.getShopOrders);
+router.get(
+  '/orders',
+  validate(shopSchema.getShopOrders),
+  shopController.getShopOrders,
+);
 router.patch(
   '/orders/:id/status',
   validate(shopSchema.updateOrderStatus),
