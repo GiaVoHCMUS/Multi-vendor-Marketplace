@@ -1,4 +1,5 @@
 import { AppError } from '../utils/AppError';
+import { cursorUtil } from '../utils/cursor';
 
 type PaginationMeta =
   | {
@@ -49,23 +50,55 @@ export class PrismaQueryHelper<
   cursorPaginate(cursorField: string = 'id') {
     const limit = Math.min(Number(this.rawQuery.limit) || 10, 100);
     const cursor = this.rawQuery.cursor;
+    const sort = this.rawQuery.sort;
 
-    this.prismaQuery.take = limit;
+    this.prismaQuery.take = limit + 1;
 
-    // Cursor pagination phải có thứ tự ổn định
-    this.prismaQuery.orderBy = {
-      [cursorField]: 'desc',
-    } as TOrderByInput;
+    let sortField = cursorField;
+    let sortOrder: 'asc' | 'desc' = 'desc';
+
+    if (sort) {
+      const [field, order] = this.rawQuery.sort.split(':');
+      sortField = field ?? cursorField;
+      sortOrder = order === 'asc' ? 'asc' : 'desc';
+    }
+
+    this.prismaQuery.orderBy = [
+      { [sortField]: sortOrder },
+      { id: sortOrder },
+    ] as TOrderByInput[];
 
     if (cursor) {
-      this.prismaQuery.cursor = { [cursorField]: cursor };
-      this.prismaQuery.skip = 1;
+      // this.prismaQuery.cursor = { [cursorField]: cursor };
+      // this.prismaQuery.skip = 1;
+      const decoded = cursorUtil.decode(cursor);
+
+      const operator = sortOrder === 'asc' ? 'gt' : 'lt';
+
+      const cursorCondition = [
+        {
+          [sortField]: {
+            [operator]: decoded[sortField],
+          },
+        },
+        {
+          AND: [
+            { [sortField]: decoded[sortField] },
+            { id: { [operator]: decoded.id } },
+          ],
+        },
+      ] as any;
+
+      this.prismaQuery.where = {
+        ...this.prismaQuery.where,
+        OR: cursorCondition,
+      } as any;
     }
 
     this.meta = {
       type: 'cursor',
       limit,
-      cursorField,
+      cursorField: sortField,
     };
 
     return this;
