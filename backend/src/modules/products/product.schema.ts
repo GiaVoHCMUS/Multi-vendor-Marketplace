@@ -2,6 +2,8 @@ import { commonRules, emptySchema } from '@/shared/schemas/common.schema';
 import { ProductStatus } from '@prisma/client';
 import { z } from 'zod';
 
+const ALLOWED_SORT = ['price:asc', 'price:desc'];
+
 const productBaseSchema = z.object({
   shopId: commonRules.id,
   categoryId: commonRules.idInt,
@@ -40,7 +42,7 @@ export const productSchema = {
     query: z
       .object({
         limit: commonRules.limit,
-        cursor: commonRules.cursor,
+        cursor: z.string().optional(),
         search: z
           .string()
           .trim()
@@ -56,6 +58,13 @@ export const productSchema = {
         maxPrice: z.coerce
           .number()
           .min(0, { message: 'Giá tối đa phải >= 0' })
+          .optional(),
+
+        sort: z
+          .enum(ALLOWED_SORT, {
+            message:
+              'Sort không hợp lệ (chỉ hỗ trợ price:asc hoặc price: desc)',
+          })
           .optional(),
 
         categorySlug: z.string().optional(),
