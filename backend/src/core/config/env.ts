@@ -6,6 +6,8 @@ export const env = {
   // Port
   PORT: process.env.PORT || 3000,
   APP_URL: process.env.APP_URL as string,
+  APP_NAME: process.env.APP_NAME as string,
+
   // Database
   DATABASE_URL: process.env.DATABASE_URL as string,
 
@@ -26,4 +28,8 @@ export const env = {
   SMTP_SECURE: process.env.SMTP_SECURE as string,
   SMTP_FROM: process.env.SMTP_FROM as string,
   SMTP_FROM_NAME: process.env.SMTP_FROM_NAME as string,
+
+  // Redis Config
+  REDIS_HOST: process.env.REDIS_HOST as string,
+  REDIS_PORT: Number(process.env.REDIS_PORT),
 };
