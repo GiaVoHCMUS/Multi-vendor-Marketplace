@@ -44,13 +44,26 @@ export const mailService = {
     options: MailTemplateOptions = {},
   ) {
     try {
+      const layoutPath = path.join(
+        TEMPLATE_DIR,
+        'layouts',
+        'email-layouts.ejs',
+      );
       const templatePath = path.join(TEMPLATE_DIR, `${templateName}.ejs`);
 
-      const html = await ejs.renderFile(templatePath, {
+      const content = await ejs.renderFile(templatePath, {
         ...options,
         appUrl: env.APP_URL,
+        appName: env.APP_NAME,
       });
 
+      const html = await ejs.renderFile(layoutPath, {
+        body: content,
+        subject,
+        appUrl: env.APP_URL,
+        appName: env.APP_NAME,
+      });
+      
       return this.sendMail(to, subject, html);
     } catch (error) {
       throw new AppError('Gửi email với mẫu không thành công', 500, error);
