@@ -7,11 +7,20 @@ import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { ShopStatus } from '@prisma/client';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
+import { mailJob } from '@/jobs/producers/mail.job';
 
 export const adminService = {
   async approveShop(shopId: string) {
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
+      include: {
+        owner: {
+          select: {
+            email: true,
+            fullName: true,
+          },
+        },
+      },
     });
 
     if (!shop) {
@@ -22,8 +31,8 @@ export const adminService = {
       throw new AppError(MESSAGE.ADMIN.SHOP_ALREADY_APPROVED, 400);
     }
 
-    return prisma.$transaction(async (tx) => {
-      const updatedShop = await tx.shop.update({
+    const updatedShop = prisma.$transaction(async (tx) => {
+      const updated = await tx.shop.update({
         where: { id: shopId },
         data: {
           status: 'ACTIVE',
@@ -37,25 +46,49 @@ export const adminService = {
         },
       });
 
-      return updatedShop;
+      return updated;
     });
+
+    await mailJob.sendShopApproval({
+      to: shop.owner.email,
+      ownerName: shop.owner.fullName,
+      shopName: shop.name,
+    });
+
+    return updatedShop;
   },
 
   async banShop(shopId: string) {
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
+      include: {
+        owner: {
+          select: {
+            email: true,
+            fullName: true,
+          },
+        },
+      },
     });
 
     if (!shop) {
       throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, 404);
     }
-
-    return prisma.shop.update({
+    const updatedShop = prisma.shop.update({
       where: { id: shopId },
       data: {
         status: 'BANNED',
       },
     });
+
+    await mailJob.sendBannedApproval({
+      to: shop.owner.email,
+      ownerName: shop.owner.fullName,
+      shopName: shop.name,
+      reason: 'Vi phạm chính sách kinh doanh',
+    });
+
+    return updatedShop;
   },
 
   async banUser(userId: string) {

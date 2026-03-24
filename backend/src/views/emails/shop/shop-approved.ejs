@@ -1,30 +1,30 @@
-<h3 style="color:#2ecc71;">🎉 Shop của bạn đã được phê duyệt!</h3>
+<h3 style="color:#333;margin-bottom:10px;">
+  Xin chào <%= ownerName %>,
+</h3>
 
-<p>Xin chào <b><%= name %></b>,</p>
-
-<p>
-  Shop <b>"<%= shopName %>"</b> của bạn đã được phê duyệt.
+<p style="font-size:14px;color:#555;">
+  Chúc mừng! Yêu cầu đăng ký mở cửa hàng <b><%= shopName %></b> của bạn đã được chúng tôi phê duyệt thành công. 🎉
 </p>
 
-<p>
-  Bây giờ bạn có thể bắt đầu:
+<p style="font-size:14px;color:#555;">
+  Bây giờ bạn đã có thể đăng nhập vào hệ thống để đăng tải sản phẩm và bắt đầu kinh doanh trên <b><%= appName %></b>.
 </p>
 
-<ul>
-  <li>Đăng sản phẩm</li>
-  <li>Quản lý đơn hàng</li>
-  <li>Theo dõi doanh thu</li>
-</ul>
+<hr style="margin:20px 0;border:none;border-top:1px solid #eee;" />
 
-<p style="text-align:center;margin:30px 0;">
-  <a 
-  href="<%= appUrl %>/seller/dashboard"
-  style="background:#2ecc71;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;"
-  >
-    Truy cập trang quản lý
+<div style="text-align: center; margin: 30px 0;">
+  <a href="<%= appUrl %>/seller/dashboard" style="background-color: #28a745; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+    Truy cập trang quản trị
   </a>
+</div>
+
+<hr style="margin:20px 0;border:none;border-top:1px solid #eee;" />
+
+<p style="font-size:14px;color:#555;">
+  Nếu bạn cần bất kỳ sự hỗ trợ nào trong quá trình thiết lập cửa hàng, đừng ngần ngại liên hệ với đội ngũ hỗ trợ đối tác của chúng tôi.
 </p>
 
-<p>
-  Chúc bạn kinh doanh thành công!
+<p style="margin-top:20px;font-size:14px;">
+  Trân trọng,<br/>
+  <b>Đội ngũ <%= appName %></b>
 </p>
