@@ -46,6 +46,7 @@ export const MESSAGE = {
     UPDATE_ADDRESS_SUCCESS: 'Cập nhật địa chỉ thành công',
     DELETE_ADDRESS_SUCCESS: 'Xóa địa chỉ thành công',
     ADDRESS_NOT_FOUND: 'Địa chỉ không tồn tại',
+    NOT_FOUND: 'Người dùng không tồn tại',
   },
 
   CATEGORY: {

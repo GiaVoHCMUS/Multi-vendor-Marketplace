@@ -6,6 +6,7 @@ import { OrderStatus, ProductStatus } from '@prisma/client';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
+import { mailJob } from '@/jobs/producers/mail.job';
 
 const redis = redisClient.getInstance();
 
@@ -13,6 +14,17 @@ const getCartKey = (userId: string) => `cart:${userId}`;
 
 export const orderService = {
   async checkout(userId: string, data: CheckoutInput) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        fullName: true,
+      },
+    });
+    if (!user) {
+      throw new AppError(MESSAGE.USER.NOT_FOUND, 404);
+    }
+
     const cart = await redis.hGetAll(getCartKey(userId));
 
     if (!cart || Object.keys(cart).length === 0) {
@@ -123,53 +135,15 @@ export const orderService = {
     });
 
     await redis.del(getCartKey(userId));
+    await mailJob.sendOrderConfirmation({
+      to: user.email,
+      customerName: user.fullName,
+      orderId: result.id,
+      totalAmount,
+    });
 
     return result;
   },
-
-  // async getMyOrders(userId: string) {
-  //   return prisma.order.findMany({
-  //     where: { orderGroup: { userId } },
-
-  //     include: {
-  //       shop: {
-  //         select: {
-  //           id: true,
-  //           name: true,
-  //           slug: true,
-  //         },
-  //       },
-
-  //       orderItems: {
-  //         include: {
-  //           product: {
-  //             select: {
-  //               id: true,
-  //               name: true,
-  //               slug: true,
-  //               price: true,
-  //               images: {
-  //                 take: 1,
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-
-  //       orderGroup: {
-  //         select: {
-  //           paymentStatus: true,
-  //           paymentMethod: true,
-  //           createdAt: true,
-  //         },
-  //       },
-  //     },
-
-  //     orderBy: {
-  //       createdAt: 'desc',
-  //     },
-  //   });
-  // },
 
   async getMyOrders(userId: string, query: any) {
     const { prismaArgs, meta } = new PrismaQueryHelper(query)
