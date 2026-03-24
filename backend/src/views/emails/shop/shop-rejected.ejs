@@ -1,0 +1,30 @@
+<h3 style="color:#e74c3c;">Yêu cầu mở shop chưa được phê duyệt</h3>
+
+<p>Xin chào <b><%= name %></b>,</p>
+
+<p>
+  Yêu cầu mở shop <b>"<%= shopName %>"</b> của bạn hiện chưa được phê duyệt.
+</p>
+
+<% if (reason) { %>
+
+  <p><b>Lý do:</b></p>
+
+  <blockquote style="background:#f5f5f5;padding:10px;border-left:4px solid #e74c3c;">
+    <%= reason %>
+  </blockquote>
+
+<% } %>
+
+<p>
+  Bạn có thể cập nhật lại thông tin và đăng ký lại.
+</p>
+
+<p style="text-align:center;margin:30px 0;">
+  <a 
+    href="<%= appUrl %>/seller/register"
+    style="background:#3498db;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;"
+  >
+  Đăng ký lại shop
+  </a>
+</p>

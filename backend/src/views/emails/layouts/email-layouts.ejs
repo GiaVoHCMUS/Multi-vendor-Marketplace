@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title><%= subject %></title>
+</head>
+
+<body style="font-family: Arial, sans-serif;background:#f4f6f8;padding:40px;">
+
+  <table width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td align="center">
+
+      <table width="600" style="background:#ffffff;border-radius:10px;padding:30px;">
+
+        <!-- HEADER -->
+        <tr>
+          <td align="center" style="padding-bottom:20px;">
+            <h2 style="margin:0;color:#333;"><%= appName %></h2>
+          </td>
+        </tr>
+
+        <!-- CONTENT -->
+        <tr>
+          <td>
+            <%- body %>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="padding-top:30px;font-size:12px;color:#888;text-align:center;">
+
+            <p>
+              Email này được gửi tự động từ <b><%= appName %></b>
+            </p>
+
+            <p>
+              Nếu bạn có câu hỏi, vui lòng truy cập
+              <a href="<%= appUrl %>"><%= appUrl %></a>
+            </p>
+
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+  </table>
+
+</body>
+</html>
