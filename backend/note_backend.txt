@@ -63,3 +63,72 @@ Set up và Config trước khi code
     │
     ├── package.json
     └── .env
+
+
+Pagination:
+  1. Offset Pagination
+    {
+      "success": true,
+      "message": "..."
+      "data": [...],
+      "meta": {
+        "currentPage": 2,
+        "limit": 10,
+        "totalItems": 120,
+        "totalPages": 12
+      }
+    }
+  
+  2. Cursor Pagination
+    {
+      "success": true,
+      "message": "..."
+      "data": [...],
+      "meta": {
+        "limit": 10,
+        "hasMore": true,
+        "nextCursor": "ckf93jd"
+      }
+    } 
+
+    next_cursor (string/opaque token): Giá trị con trỏ của bản ghi cuối cùng trong trang hiện tại, dùng để truyền vào tham số after cho yêu cầu tiếp theo.
+    previous_cursor (string/opaque token): Giá trị con trỏ của bản ghi đầu tiên, dùng để quay lại trang trước (before).
+    has_more (boolean): Cho biết còn dữ liệu phía sau hay không.
+    limit (integer): Số lượng item thực tế đã trả về trong trang này.
+
+1️⃣ Pagination utilities
+2️⃣ Redis setup
+3️⃣ Product + Category caching
+4️⃣ Redis cart
+5️⃣ BullMQ queues
+6️⃣ Mail service
+7️⃣ Cron jobs (analytics, cleanup)
+8️⃣ Cache abstraction layer
+
+Vì middleware upload chạy trước zod nên nếu zod validation lỗi thì
+ảnh vẫn đã được upload lên cloudinary rồi
+
+Việc tiếp theo khi làm:
+  Thêm các sản phẩm trong 10 sản phẩm vào chia cho 2-3 Seller để testing phân quyền,
+  filter, đặt hàng các kiểu  ---> Đã làm
+
+Phân trang:
+  Bây giờ chỉ cần fix thêm phân trang của products sao cho:
+    - limit
+    - cursor
+    - search
+    - minPrice
+    - maxPrice
+    - categorySlug
+    - shopSlug
+    - desc/asc -> Tăng dần và giảm dần
+
+Sau đó thì qua làm phần mail service, BullMQ: worker & consumer.
+
+
+Trong Product sau này có thể thêm:
+  rating:desc
+  createdAt:desc
+  price:asc,createdAt:desc (multi sort)
+
+  Có thêm hash md5 cho cache key
