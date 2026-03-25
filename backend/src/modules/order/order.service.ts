@@ -6,7 +6,7 @@ import { OrderStatus, ProductStatus } from '@prisma/client';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
-import { mailJob } from '@/jobs/producers/mail.job';
+import { mailJob } from '@/jobs/mail/mail.job';
 
 const redis = redisClient.getInstance();
 

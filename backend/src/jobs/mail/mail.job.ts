@@ -1,4 +1,4 @@
-import { mailQueue } from '@/core/queue/mail.queue';
+import { mailQueue } from './mail.queue';
 import { JOB_NAME } from '@/shared/constants/queue.constants';
 import {
   ForgotPasswordMail,

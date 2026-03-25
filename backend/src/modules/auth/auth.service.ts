@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import { UserRole } from '@prisma/client';
 import { sessionService } from '@/core/cache/session.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
-import { mailJob } from '@/jobs/producers/mail.job';
+import { mailJob } from '@/jobs/mail/mail.job';
 import { redisClient } from '@/core/cache/redis';
 
 const redis = redisClient.getInstance();

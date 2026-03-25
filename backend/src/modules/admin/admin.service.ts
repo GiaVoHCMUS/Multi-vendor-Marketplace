@@ -7,7 +7,7 @@ import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { ShopStatus } from '@prisma/client';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
-import { mailJob } from '@/jobs/producers/mail.job';
+import { mailJob } from '@/jobs/mail/mail.job';
 
 export const adminService = {
   async approveShop(shopId: string) {
