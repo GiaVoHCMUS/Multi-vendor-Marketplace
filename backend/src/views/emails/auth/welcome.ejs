@@ -1,0 +1,47 @@
+<h3 style="color: #333; margin-bottom: 10px">Chào mừng <%= fullName %>! 🎉</h3>
+
+<p style="font-size: 14px; color: #555">
+  Cảm ơn bạn đã đăng ký thành viên tại <b><%= appName %></b> với email:
+  <b><%= to %></b>.
+</p>
+
+<p style="font-size: 14px; color: #555">
+  Để bắt đầu trải nghiệm đầy đủ các tính năng của chúng tôi, vui lòng xác nhận
+  địa chỉ email của bạn bằng cách nhấn vào nút bên dưới:
+</p>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+<div style="text-align: center; margin: 30px 0">
+  <a
+    href="<%= appUrl %>/verify-email?token=<%= token %>"
+    style="
+      background-color: #28a745;
+      color: #ffffff;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      display: inline-block;
+    "
+  >
+    Xác nhận tài khoản
+  </a>
+</div>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+<p style="font-size: 14px; color: #555">
+  Sau khi xác nhận, bạn có thể đăng nhập và bắt đầu mua sắm hoặc thiết lập cửa
+  hàng của riêng mình ngay lập tức.
+</p>
+
+<p style="font-size: 14px; color: #555">
+  Chúng tôi rất vui mừng khi có bạn đồng hành!
+</p>
+
+<p style="margin-top: 20px; font-size: 14px">
+  Trân trọng,<br />
+  <b>Đội ngũ <%= appName %></b>
+</p>

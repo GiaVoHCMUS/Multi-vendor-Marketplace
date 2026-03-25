@@ -17,3 +17,15 @@ export type ShopBanned = {
   shopName: string;
   reason: string;
 };
+
+export type WelcomeMail = {
+  to: string;
+  fullName: string;
+  token: string;
+};
+
+export type ForgotPasswordMail = {
+  to: string;
+  fullName: string;
+  token: string;
+};

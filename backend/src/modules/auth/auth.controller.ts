@@ -9,16 +9,9 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 export const authController = {
   register: catchAsync(async (req: Request, res: Response) => {
     const { email, password, fullName } = req.body;
-    const result = await authService.register(email, password, fullName);
+    await authService.register(email, password, fullName);
 
-    const { refreshToken, accessToken, user } = result;
-
-    res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
-
-    successResponse(res, 201, MESSAGE.AUTH.REGISTER_SUCCESS, {
-      user,
-      accessToken,
-    });
+    successResponse(res, 201, MESSAGE.AUTH.REGISTER_SUCCESS);
   }),
 
   login: catchAsync(async (req: Request, res: Response) => {
@@ -64,5 +57,26 @@ export const authController = {
     successResponse(res, 200, MESSAGE.AUTH.REFRESH_TOKEN_SUCCESS, {
       accessToken: tokens.accessToken,
     });
+  }),
+
+  forgotPassword: catchAsync(async (req: Request, res: Response) => {
+    const { email } = req.body;
+    await authService.forgotPassword(email);
+
+    successResponse(res, 200, MESSAGE.AUTH.FORGOT_PASSWORD_SUCCESS);
+  }),
+
+  resetPassword: catchAsync(async (req: Request, res: Response) => {
+    const { token, password } = req.body;
+    await authService.resetPassword(token, password);
+
+    successResponse(res, 200, MESSAGE.AUTH.RESET_PASSWORD_SUCCESS);
+  }),
+
+  verifyEmail: catchAsync(async (req: Request, res: Response) => {
+    const { token } = req.query;
+    await authService.verifyEmail(token as string);
+
+    successResponse(res, 200, MESSAGE.AUTH.VERIFY_EMAIL_SUCCESS);
   }),
 };

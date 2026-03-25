@@ -63,9 +63,10 @@ export const mailService = {
         appUrl: env.APP_URL,
         appName: env.APP_NAME,
       });
-      
+
       return this.sendMail(to, subject, html);
     } catch (error) {
+      console.log(error);
       throw new AppError('Gửi email với mẫu không thành công', 500, error);
     }
   },

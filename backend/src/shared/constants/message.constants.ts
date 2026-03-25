@@ -23,7 +23,16 @@ export const MESSAGE = {
     SESSION_EXPIRED: 'Phiên đăng nhập đã hết hạn',
     SESSION_INVALID: 'Phiên đăng nhập không hợp lệ',
     SECURITY_BREACH: 'Cảnh báo bảo mật, vui lòng đăng nhập lại',
+    FORGOT_PASSWORD_SUCCESS:
+      'Yêu cầu đặt lại mật khẩu thành công. Chúng tôi đã gửi xác thực đến email của bạn',
+    RESET_PASSWORD_SUCCESS: 'Đặt lại mật khẩu thành công',
+    CHANGE_PASSWORD_SUCCESS: 'Thay đổi mật khẩu thành công',
+    NOT_FOUND_EMAIL: 'Email không tồn tại',
+    INVALID_OR_EXPIRED_TOKEN: 'Token không đúng hoặc đã hết hạn',
+    VERIFY_EMAIL_SUCCESS:
+      'Xác thực email thành công. Bạn có thể đăng nhập ngay bây giờ',
   },
+
   SHOP: {
     NOT_FOUND: 'Cửa hàng không tồn tại',
     NOT_ACTIVE: 'Cửa hàng chưa được duyệt hoặc đã bị khóa',

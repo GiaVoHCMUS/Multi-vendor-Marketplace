@@ -4,9 +4,11 @@ import { mailService } from '@/shared/services/mail.service';
 import { JOB_NAME, QUEUE_NAME } from '@/shared/constants/queue.constants';
 import { EMAIL, EMAIL_TEMPLATE } from '@/shared/constants/mail.constants';
 import {
+  ForgotPasswordMail,
   OrderConfirmation,
   ShopApproved,
   ShopBanned,
+  WelcomeMail,
 } from '@/shared/types/mail.job';
 
 const handleSendEmailConfirmation = async (data: OrderConfirmation) => {
@@ -50,6 +52,26 @@ const handleSendEmailBannedShop = async (data: ShopBanned) => {
   );
 };
 
+const handleSendEmailWelcome = async (data: WelcomeMail) => {
+  const { to, fullName, token } = data;
+  await mailService.sendWithTemplate(
+    to,
+    EMAIL.AUTH.WELCOME,
+    EMAIL_TEMPLATE.AUTH.WELCOME,
+    { to, fullName, token },
+  );
+};
+
+const handleSendEmailForgotPassword = async (data: ForgotPasswordMail) => {
+  const { to, fullName, token } = data;
+  await mailService.sendWithTemplate(
+    to,
+    EMAIL.AUTH.FORGOT_PASSWORD,
+    EMAIL_TEMPLATE.AUTH.FORTGOT_PASSWORD,
+    { to, fullName, token },
+  );
+};
+
 const worker = new Worker(
   QUEUE_NAME.EMAIL,
   async (job) => {
@@ -64,6 +86,14 @@ const worker = new Worker(
       }
       case JOB_NAME.EMAIL.SHOP_BANNED: {
         await handleSendEmailBannedShop(job.data);
+        break;
+      }
+      case JOB_NAME.EMAIL.WELCOME: {
+        await handleSendEmailWelcome(job.data);
+        break;
+      }
+      case JOB_NAME.EMAIL.FORGOT_PASSWORD: {
+        await handleSendEmailForgotPassword(job.data);
         break;
       }
       default: {
