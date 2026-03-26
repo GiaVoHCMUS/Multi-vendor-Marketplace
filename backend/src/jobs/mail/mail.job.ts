@@ -7,16 +7,7 @@ import {
   ShopBanned,
   WelcomeMail,
 } from '@/shared/types/mail.job';
-
-const config = {
-  attempts: 3,
-  backoff: {
-    type: 'exponential',
-    delay: 3000,
-  },
-  removeOnComplete: true,
-  removeOnFail: 1000,
-};
+import { config } from '@/shared/utils/bullmqOptions';
 
 export const mailJob = {
   sendOrderConfirmation: async (data: OrderConfirmation) => {

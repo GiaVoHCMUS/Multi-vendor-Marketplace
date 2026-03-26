@@ -12,7 +12,10 @@ import productRoutes from './modules/products/product.routes';
 import cartRoutes from './modules/cart/cart.routes';
 import orderRoutes from './modules/order/order.routes';
 import adminRoutes from './modules/admin/admin.routes';
+import { setupCron } from './jobs/cron';
+
 const app: Application = express();
+setupCron();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
