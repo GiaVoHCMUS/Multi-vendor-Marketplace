@@ -37,3 +37,11 @@ export type DailyReportMail = {
   totalOrders: number;
   totalRevenue: number;
 };
+
+export type OrderCancelledMail = {
+  to: string;
+  customerName: string;
+  orderId: string;
+  totalAmount: number;
+  shippingAddress: string;
+};

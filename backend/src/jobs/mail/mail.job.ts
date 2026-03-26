@@ -3,6 +3,7 @@ import { JOB_NAME } from '@/shared/constants/queue.constants';
 import {
   DailyReportMail,
   ForgotPasswordMail,
+  OrderCancelledMail,
   OrderConfirmation,
   ShopApproved,
   ShopBanned,
@@ -35,5 +36,9 @@ export const mailJob = {
 
   sendDailyReport: async (data: DailyReportMail) => {
     await mailQueue.add(JOB_NAME.EMAIL.DAILY_REPORT, data, config);
+  },
+
+  sendOrderCancelled: async (data: OrderCancelledMail) => {
+    await mailQueue.add(JOB_NAME.EMAIL.ORDER_AUTO_CANCELLED, data, config);
   },
 };

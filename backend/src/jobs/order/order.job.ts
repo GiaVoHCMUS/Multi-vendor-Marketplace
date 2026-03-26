@@ -11,7 +11,7 @@ export const orderJob = {
         jobId: JOB_ID.CRON.ORDER_CLEANUP_EVERY_5M,
         ...config,
         repeat: {
-          pattern: '*/10 * * * *', // mỗi 10 phút
+          pattern: '*/2 * * * *', // mỗi 10 phút
         },
       },
     );

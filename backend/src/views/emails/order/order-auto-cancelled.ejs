@@ -1,0 +1,87 @@
+<h3 style="color: #333; margin-bottom: 10px">Xin chào <%= customerName %>,</h3>
+
+<p style="font-size: 14px; color: #555; line-height: 1.5">
+  Chúng tôi rất tiếc phải thông báo rằng đơn hàng <b>#<%= orderId %></b> tại
+  <b><%= appName %></b> đã được hệ thống tự động hủy.
+</p>
+
+<div
+  style="
+    background-color: #fff5f5;
+    border-left: 4px solid #dc3545;
+    padding: 15px;
+    margin: 20px 0;
+  "
+>
+  <p style="font-size: 14px; color: #b02a37; margin: 0">
+    <b>Lý do:</b> Đơn hàng đã quá 24 giờ kể từ lúc đặt nhưng chưa được phía
+    người bán xác nhận xử lý.
+  </p>
+</div>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+<!-- Thông tin đơn hàng đã hủy -->
+<p style="font-size: 14px; color: #888; margin-bottom: 5px">
+  Chi tiết đơn hàng bị hủy:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="padding-bottom: 10px">
+      <span style="font-size: 14px; color: #555">Mã đơn hàng:</span><br />
+      <span style="font-size: 16px; font-weight: bold; color: #333"
+        >#<%= orderId %></span
+      >
+    </td>
+  </tr>
+  <tr>
+    <td style="padding-bottom: 10px">
+      <span style="font-size: 14px; color: #555">Tổng thanh toán:</span><br />
+      <span style="font-size: 18px; font-weight: bold; color: #dc3545"
+        ><%= totalAmount %> VND</span
+      >
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <span style="font-size: 14px; color: #555">Địa chỉ nhận hàng:</span><br />
+      <span style="font-size: 14px; color: #333"><%= shippingAddress %></span>
+    </td>
+  </tr>
+</table>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+<p style="font-size: 14px; color: #555">
+  Nếu bạn đã thực hiện thanh toán trước cho đơn hàng này, số tiền sẽ được hoàn
+  trả vào tài khoản/ví của bạn theo chính sách hoàn tiền của hệ thống.
+</p>
+
+<p style="font-size: 14px; color: #555">
+  Bạn có thể tìm kiếm sản phẩm tương tự hoặc đặt lại đơn hàng mới tại cửa hàng
+  khác trên hệ thống của chúng tôi.
+</p>
+
+<div style="text-align: center; margin: 30px 0">
+  <a
+    href="<%= appUrl %>"
+    style="
+      background-color: #333;
+      color: #ffffff;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      display: inline-block;
+    "
+  >
+    Tiếp tục mua sắm
+  </a>
+</div>
+
+<p style="margin-top: 20px; font-size: 14px">
+  Trân trọng,<br />
+  <b>Đội ngũ hỗ trợ <%= appName %></b>
+</p>

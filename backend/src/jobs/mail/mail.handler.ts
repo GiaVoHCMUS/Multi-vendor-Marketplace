@@ -3,6 +3,7 @@ import { mailService } from '@/shared/services/mail.service';
 import {
   DailyReportMail,
   ForgotPasswordMail,
+  OrderCancelledMail,
   OrderConfirmation,
   ShopApproved,
   ShopBanned,
@@ -82,6 +83,22 @@ export const handleSendEmail = {
         shopName,
         totalOrders,
         totalRevenue,
+      },
+    );
+  },
+
+  orderAutoCancelled: async (data: OrderCancelledMail) => {
+    const { to, customerName, orderId, totalAmount, shippingAddress } = data;
+    console.log('Gửi email');
+    await mailService.sendWithTemplate(
+      to,
+      EMAIL.ORDER.AUTO_CANCELLED(orderId),
+      EMAIL_TEMPLATE.ORDER.AUTO_CANCELLED,
+      {
+        customerName,
+        orderId,
+        totalAmount,
+        shippingAddress,
       },
     );
   },

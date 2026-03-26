@@ -12,6 +12,7 @@ export const JOB_NAME = {
     SHOP_APPROVED: 'send-shop-approved-email',
     SHOP_BANNED: 'send-shop-banned-email',
     DAILY_REPORT: 'daily-report-email',
+    ORDER_AUTO_CANCELLED: 'order-auto-cancelled-email',
   },
 
   ORDER: {

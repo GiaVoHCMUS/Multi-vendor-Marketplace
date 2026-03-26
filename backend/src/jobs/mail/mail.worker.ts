@@ -31,6 +31,10 @@ const worker = new Worker(
         await handleSendEmail.dailyReport(job.data);
         break;
       }
+      case JOB_NAME.EMAIL.ORDER_AUTO_CANCELLED: {
+        await handleSendEmail.orderAutoCancelled(job.data);
+        break;
+      }
       default: {
         throw new Error('Không tìm thấy tên job');
       }

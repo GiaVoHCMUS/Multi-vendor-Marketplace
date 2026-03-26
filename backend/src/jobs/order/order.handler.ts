@@ -1,5 +1,6 @@
 import { prisma } from '@/core/config/prisma';
 import { OrderStatus } from '@prisma/client';
+import { mailJob } from '../mail/mail.job';
 
 export const orderHandler = {
   autoCancel: async () => {
@@ -13,7 +14,16 @@ export const orderHandler = {
         },
       },
       include: {
-        orderGroup: true,
+        orderGroup: {
+          include: {
+            user: {
+              select: {
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -29,17 +39,18 @@ export const orderHandler = {
     });
 
     // gửi mail async
-    // await Promise.all(
-    //   orders.map((order) =>
-    //     mailJob.sendOrderCancelled({
-    //       to: order.user.email,
-    //       customerName: order.user.fullName,
-    //       orderId: order.id,
-    //     }),
-    //   ),
-    // );
+    await Promise.all(
+      orders.map((order) =>
+        mailJob.sendOrderCancelled({
+          to: order.orderGroup.user.email,
+          customerName: order.orderGroup.user.fullName,
+          orderId: order.id,
+          totalAmount: Number(order.totalAmount),
+          shippingAddress: order.orderGroup.shippingAddress,
+        }),
+      ),
+    );
 
     console.log(`✅ Auto cancelled ${orders.length} orders`);
   },
 };
-

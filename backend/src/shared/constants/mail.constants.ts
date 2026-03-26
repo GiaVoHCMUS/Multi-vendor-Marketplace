@@ -4,6 +4,8 @@ import { formatVNDate } from '../utils/date';
 export const EMAIL = {
   ORDER: {
     CONFIRMATION: 'Xác nhận đơn hàng',
+    AUTO_CANCELLED: (orderId: string) =>
+      `Đơn hàng ${orderId} bị hủy do không hoạt động`,
   },
   SHOP: {
     APPROVAL: 'Phê duyệt cửa hàng',
@@ -21,6 +23,7 @@ export const EMAIL = {
 export const EMAIL_TEMPLATE = {
   ORDER: {
     CONFIRMATION: 'order/order-confirmation',
+    AUTO_CANCELLED: 'order/order-auto-cancelled',
   },
   SHOP: {
     APPROVAL: 'shop/shop-approved',
