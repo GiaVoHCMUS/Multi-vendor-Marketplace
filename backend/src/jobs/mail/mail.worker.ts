@@ -27,6 +27,10 @@ const worker = new Worker(
         await handleSendEmail.forgotPassword(job.data);
         break;
       }
+      case JOB_NAME.EMAIL.DAILY_REPORT: {
+        await handleSendEmail.dailyReport(job.data);
+        break;
+      }
       default: {
         throw new Error('Không tìm thấy tên job');
       }

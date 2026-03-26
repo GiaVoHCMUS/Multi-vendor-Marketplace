@@ -1,6 +1,7 @@
 import { EMAIL, EMAIL_TEMPLATE } from '@/shared/constants/mail.constants';
 import { mailService } from '@/shared/services/mail.service';
 import {
+  DailyReportMail,
   ForgotPasswordMail,
   OrderConfirmation,
   ShopApproved,
@@ -67,6 +68,21 @@ export const handleSendEmail = {
       EMAIL.AUTH.FORGOT_PASSWORD,
       EMAIL_TEMPLATE.AUTH.FORTGOT_PASSWORD,
       { to, fullName, token },
+    );
+  },
+
+  dailyReport: async (data: DailyReportMail) => {
+    const { to, ownerName, shopName, totalOrders, totalRevenue } = data;
+    await mailService.sendWithTemplate(
+      to,
+      EMAIL.REPORT.DAILY,
+      EMAIL_TEMPLATE.REPORT.DAILY,
+      {
+        ownerName,
+        shopName,
+        totalOrders,
+        totalRevenue,
+      },
     );
   },
 };

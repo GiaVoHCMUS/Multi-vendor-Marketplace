@@ -1,4 +1,5 @@
 import { env } from '@/core/config/env';
+import { formatVNDate } from '../utils/date';
 
 export const EMAIL = {
   ORDER: {
@@ -11,6 +12,9 @@ export const EMAIL = {
   AUTH: {
     WELCOME: `Chào mừng bạn đã đến với ${env.APP_NAME}`,
     FORGOT_PASSWORD: 'Xác nhận đặt lại mật khẩu',
+  },
+  REPORT: {
+    DAILY: `Thống kê doanh số ngày ${formatVNDate(new Date())}`,
   },
 };
 
@@ -25,5 +29,8 @@ export const EMAIL_TEMPLATE = {
   AUTH: {
     WELCOME: 'auth/welcome',
     FORTGOT_PASSWORD: 'auth/forgot-password',
+  },
+  REPORT: {
+    DAILY: '/report/daily',
   },
 };

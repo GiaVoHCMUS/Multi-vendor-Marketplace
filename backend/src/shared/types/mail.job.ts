@@ -29,3 +29,11 @@ export type ForgotPasswordMail = {
   fullName: string;
   token: string;
 };
+
+export type DailyReportMail = {
+  to: string;
+  ownerName: string;
+  shopName: string;
+  totalOrders: number;
+  totalRevenue: number;
+};
