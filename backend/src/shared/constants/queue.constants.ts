@@ -1,6 +1,7 @@
 export const QUEUE_NAME = {
   EMAIL: 'mail-queue',
   ORDER: 'order-queue',
+  REPORT: 'report-queue',
 };
 
 export const JOB_NAME = {
@@ -10,10 +11,15 @@ export const JOB_NAME = {
     ORDER_CONFIRMATION: 'send-order-confirmation',
     SHOP_APPROVED: 'send-shop-approved-email',
     SHOP_BANNED: 'send-shop-banned-email',
+    DAILY_REPORT: 'daily-report-email',
   },
 
   ORDER: {
     AUTO_CANCEL: 'auto-cancel-order',
+  },
+
+  REPORT: {
+    DAILY: 'daily-report',
   },
 };
 
@@ -30,5 +36,6 @@ export const JOB_ID = {
 
   CRON: {
     ORDER_CLEANUP_EVERY_5M: 'cron:order:cleanup-5m',
+    DAILY_REPORT: 'cron:report:daily',
   },
 };
