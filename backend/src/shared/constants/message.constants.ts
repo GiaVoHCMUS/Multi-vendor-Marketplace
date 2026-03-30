@@ -100,6 +100,7 @@ export const MESSAGE = {
     NOT_FOUND: 'Đơn hàng không tồn tại',
     FORBIDDEN_UPDATE_STATUS:
       'Bạn không có quyền thay đổi trạng thái đơn hàng này',
+    ALREADY_PAID_OR_INVALID: 'Đơn hàng đã thanh toán hoặc không hợp lệ',
   },
 
   IMAGE: {
