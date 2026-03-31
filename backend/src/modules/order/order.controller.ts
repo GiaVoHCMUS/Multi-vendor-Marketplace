@@ -6,7 +6,12 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 
 export const orderController = {
   checkout: catchAsync(async (req: Request, res: Response) => {
-    const order = await orderService.checkout(req.user!.id, req.body);
+    const ipAddr =
+      req.headers['x-forwarded-for']?.toString().split(',')[0] ||
+      req.socket.remoteAddress ||
+      '';
+      
+    const order = await orderService.checkout(req.user!.id, ipAddr, req.body);
 
     successResponse(res, 201, MESSAGE.ORDER.CHECKOUT_SUCCESS, order);
   }),

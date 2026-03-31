@@ -1,5 +1,4 @@
-import { prisma } from '@/core/config/prisma';
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 
 /**
  * Check toàn bộ orders của một OrderGroup.
@@ -8,9 +7,12 @@ import { OrderStatus, PaymentStatus } from '@prisma/client';
  * Chỉ áp dụng cho phương thức thanh toán COD
  */
 
-export const checkAndCompleteOrderGroup = async (orderGroupId: string) => {
+export const checkAndCompleteOrderGroup = async (
+  tx: Prisma.TransactionClient,
+  orderGroupId: string,
+) => {
   // Lấy tất cả orders của OrderGroup
-  const orders = await prisma.order.findMany({
+  const orders = await tx.order.findMany({
     where: { orderGroupId },
     select: { status: true },
   });
@@ -26,10 +28,9 @@ export const checkAndCompleteOrderGroup = async (orderGroupId: string) => {
 
   if (allDelivered) {
     // Cập nhật OrderGroup
-    await prisma.orderGroup.update({
+    await tx.orderGroup.update({
       where: { id: orderGroupId },
       data: { paymentStatus: PaymentStatus.COMPLETED },
     });
   }
 };
-

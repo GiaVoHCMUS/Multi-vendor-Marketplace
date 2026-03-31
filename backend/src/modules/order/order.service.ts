@@ -15,13 +15,14 @@ import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { checkAndCompleteOrderGroup } from './order.helper';
+import { paymentService } from '../payment/payment.service';
 
 const redis = redisClient.getInstance();
 
 const getCartKey = (userId: string) => `cart:${userId}`;
 
 export const orderService = {
-  async checkout(userId: string, data: CheckoutInput) {
+  async checkout(userId: string, ipAddr: string, data: CheckoutInput) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -29,6 +30,7 @@ export const orderService = {
         fullName: true,
       },
     });
+
     if (!user) {
       throw new AppError(MESSAGE.USER.NOT_FOUND, 404);
     }
@@ -51,6 +53,17 @@ export const orderService = {
         id: { in: productIds },
         deletedAt: null,
         status: ProductStatus.PUBLISHED,
+      },
+      select: {
+        id: true,
+        shopId: true,
+        categoryId: true,
+        name: true,
+        slug: true,
+        price: true,
+        stock: true,
+        status: true,
+        averageRating: true,
       },
     });
 
@@ -81,7 +94,7 @@ export const orderService = {
     });
 
     // Group theo shop
-    const shopMap = new Map<string, any>();
+    const shopMap = new Map<string, typeof orderItems>();
 
     for (const item of orderItems) {
       const shopId = item.product.shopId;
@@ -89,7 +102,7 @@ export const orderService = {
         shopMap.set(shopId, []);
       }
 
-      shopMap.get(shopId).push(item);
+      shopMap.get(shopId)!.push(item);
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -106,7 +119,7 @@ export const orderService = {
 
       for (const [shopId, items] of shopMap) {
         const shopTotal: number = items.reduce(
-          (sum: number, item) => sum + item.price * item.quantity,
+          (sum, item) => sum + item.price * item.quantity,
           0,
         );
 
@@ -143,14 +156,28 @@ export const orderService = {
     });
 
     await redis.del(getCartKey(userId));
-    await mailJob.sendOrderConfirmation({
-      to: user.email,
-      customerName: user.fullName,
-      orderId: result.id,
-      totalAmount,
-    });
 
-    return result;
+    if (data.paymentMethod === PaymentMethod.COD) {
+      // COD -> gửi mail ngay
+      await mailJob.sendOrderConfirmation({
+        to: user.email,
+        customerName: user.fullName,
+        orderId: result.id,
+        totalAmount,
+      });
+      return { result, paymentUrl: null };
+    }
+
+    if (data.paymentMethod === PaymentMethod.VNPAY) {
+      // VNPAY -> tạo payment URL (gọi payment service)
+      const { paymentUrl } = await paymentService.createPayment({
+        orderGroupId: result.id,
+        provider: PaymentMethod.VNPAY,
+        ipAddr,
+      });
+
+      return { result, paymentUrl };
+    }
   },
 
   // Xem danh sách toàn bộ đơn hàng
@@ -378,7 +405,7 @@ export const orderService = {
         });
 
         // Kiểm tra và cập nhật orderGroup
-        await checkAndCompleteOrderGroup(order.orderGroupId);
+        await checkAndCompleteOrderGroup(tx, order.orderGroupId);
       }
 
       return updatedOrder;
