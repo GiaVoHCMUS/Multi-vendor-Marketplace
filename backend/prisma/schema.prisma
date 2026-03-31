@@ -27,22 +27,21 @@ enum ProductStatus {
 }
 
 enum OrderStatus {
-  PENDING
-  PAID
-  SHIPPING
-  DELIVERED
-  CANCELLED
+  PENDING           // đơn hàng vừa tạo
+  CONFIRMED         // seller đã nhận đơn
+  SHIPPING          // đang giao hàng
+  DELIVERED         // đã giao hàng
+  CANCELLED         // hủy đơn hàng
 }
 
 enum PaymentMethod {
   COD
-  STRIPE
-  MOCK_PAYMENT
+  VNPAY
 }
 
 enum PaymentStatus {
-  PENDING
-  COMPLETED
+  PENDING           // chưa thanh toán
+  COMPLETED         // đã thanh toán
   FAILED
   REFUNDED
 }
@@ -51,6 +50,12 @@ enum TransactionType {
   PAYMENT
   REFUND
   WITHDRAWAL
+}
+
+enum PayoutStatus {
+  PENDING     // chưa xử lý
+  HOLDING     // đã thanh toán nhưng system đang giữ tiền
+  PAID_OUT    // đã trả cho seller
 }
 
 // --- MODELS ---
@@ -118,6 +123,7 @@ model Shop {
   owner         User       @relation(fields: [ownerId], references: [id])
   products      Product[]
   orders        Order[]
+  transactions  Transaction[]
 
   @@index([ownerId, deletedAt])
   @@index([status, deletedAt])
@@ -188,9 +194,10 @@ model OrderGroup {
   userId          String        @db.Uuid
   totalAmount     Decimal       @db.Decimal(12, 2)
 
-  paymentMethod   PaymentMethod @default(MOCK_PAYMENT)
+  paymentMethod   PaymentMethod @default(COD)
   paymentStatus   PaymentStatus @default(PENDING)
-  
+  paidAt          DateTime?
+
   // Thông tin giao hàng dùng chung cho cả đợt thanh toán
   shippingName    String
   shippingPhone   String
@@ -201,7 +208,7 @@ model OrderGroup {
   
   orders          Order[]       // Một lần thanh toán có thể có nhiều Order (của nhiều Shop)
   user            User          @relation(fields: [userId], references: [id])
-  transaction     Transaction?
+  transactions    Transaction[]
 
   @@index([userId, paymentStatus])
   @@map("order_groups")
@@ -213,12 +220,17 @@ model Order {
   shopId          String      @db.Uuid
   totalAmount     Decimal     @db.Decimal(12, 2) // Tổng tiền của riêng Shop này
   status          OrderStatus @default(PENDING)  // Seller quản lý trạng thái này
+
+  payoutStatus    PayoutStatus  @default(PENDING)
+  payoutAt        DateTime?
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   
   orderGroup      OrderGroup  @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
   shop            Shop        @relation(fields: [shopId], references: [id])
   orderItems      OrderItem[]
+  transactions    Transaction[]
   
   @@map("orders")
 }
@@ -254,14 +266,25 @@ model Review {
 
 model Transaction {
   id              String          @id @default(uuid()) @db.Uuid
-  orderGroupId    String          @unique @db.Uuid
+  orderGroupId    String?         @db.Uuid
+  orderId         String?         @db.Uuid
+  shopId          String?         @db.Uuid
+
   amount          Decimal         @db.Decimal(12, 2)
+  
   type            TransactionType
   status          PaymentStatus   @default(COMPLETED)
+
+  description     String?
   createdAt       DateTime        @default(now())
 
-  orderGroup      OrderGroup      @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
+  orderGroup      OrderGroup?       @relation(fields: [orderGroupId], references: [id])
+  order           Order?            @relation(fields: [orderId], references: [id])
+  shop            Shop?             @relation(fields: [shopId], references: [id])
 
+  @@index([orderGroupId])
+  @@index([orderId])
+  @@index([shopId])
   @@map("transactions")
 }
 
