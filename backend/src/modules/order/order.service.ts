@@ -2,11 +2,19 @@ import { redisClient } from '@/core/cache/redis';
 import { CheckoutInput } from './order.type';
 import { AppError } from '@/shared/utils/AppError';
 import { prisma } from '@/core/config/prisma';
-import { OrderStatus, ProductStatus } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  PayoutStatus,
+  ProductStatus,
+  TransactionType,
+} from '@prisma/client';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { mailJob } from '@/jobs/mail/mail.job';
+import { checkAndCompleteOrderGroup } from './order.helper';
 
 const redis = redisClient.getInstance();
 
@@ -145,6 +153,7 @@ export const orderService = {
     return result;
   },
 
+  // Xem danh sách toàn bộ đơn hàng
   async getMyOrders(userId: string, query: any) {
     const { prismaArgs, meta } = new PrismaQueryHelper(query)
       .paginate()
@@ -209,6 +218,7 @@ export const orderService = {
     };
   },
 
+  // Xem chi tiết từng đơn hàng
   async getOrderDetail(userId: string, orderId: string) {
     const order = await prisma.order.findFirst({
       where: {
@@ -216,7 +226,13 @@ export const orderService = {
         orderGroup: { userId },
       },
 
-      include: {
+      select: {
+        id: true,
+        orderGroupId: true,
+        shopId: true,
+        totalAmount: true,
+        status: true,
+
         shop: true,
 
         orderItems: {
@@ -241,6 +257,8 @@ export const orderService = {
             createdAt: true,
           },
         },
+
+        transactions: true,
       },
     });
 
@@ -253,13 +271,15 @@ export const orderService = {
 
   async updateOrderStatus(
     orderId: string,
-    status: OrderStatus,
+    nextStatus: OrderStatus, // Trạng thái đơn hàng mà Seller muốn cập nhật
     sellerId: string,
   ) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
         shop: true,
+        orderGroup: true,
+        orderItems: true,
       },
     });
 
@@ -267,13 +287,101 @@ export const orderService = {
       throw new AppError(MESSAGE.ORDER.NOT_FOUND, 404);
     }
 
+    // Kiểm tra quyền seller
     if (order.shop.ownerId !== sellerId) {
       throw new AppError(MESSAGE.ORDER.FORBIDDEN_UPDATE_STATUS, 403);
     }
 
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { status },
+    // State machine: PENDING -> CONFIRMED -> SHIPPING -> DELIVERED -> CANCELLED
+    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+      PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+      CONFIRMED: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
+      SHIPPING: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+      DELIVERED: [],
+      CANCELLED: [],
+    };
+
+    if (!allowedTransitions[order.status].includes(nextStatus)) {
+      throw new AppError(
+        `Thay đổi trạng thái không hợp lệ ${order.status} -> ${nextStatus}`,
+        400,
+      );
+    }
+
+    // Transaction: update status + payout logic
+    return prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: nextStatus },
+      });
+
+      if (nextStatus === OrderStatus.CANCELLED) {
+        for (const item of order.orderItems) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+          });
+        }
+
+        // Tạo Transaction ghi nhận hủy đơn (chỉ thông tin, không thay đổi tiền)
+        await tx.transaction.create({
+          data: {
+            type: TransactionType.REFUND,
+            amount: 0, // COD chưa trả tiền → ghi 0
+            status: PaymentStatus.COMPLETED,
+            shopId: order.shopId,
+            orderId: order.id,
+            orderGroupId: order.orderGroupId,
+            description: 'Đơn hàng bị hủy, rollback stock',
+          },
+        });
+      }
+
+      if (
+        nextStatus === OrderStatus.DELIVERED &&
+        order.orderGroup.paymentMethod === PaymentMethod.COD
+      ) {
+        // Update payoutStatus
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            payoutStatus: PayoutStatus.PAID_OUT,
+            payoutAt: new Date(),
+          },
+        });
+
+        // Tăng balance cho shop
+        await tx.shop.update({
+          where: { id: order.shopId },
+          data: {
+            balance: {
+              increment: Number(order.totalAmount),
+            },
+          },
+        });
+
+        // Tạo Transaction ghi nhận tiền
+        await tx.transaction.create({
+          data: {
+            type: TransactionType.PAYMENT,
+            amount: order.totalAmount,
+            status: PaymentStatus.COMPLETED,
+            shopId: order.shopId,
+            orderId: order.id,
+            orderGroupId: order.orderGroupId,
+            description: 'Đơn hàng thanh toán khi nhận hàng đã được giao',
+          },
+        });
+
+        // Kiểm tra và cập nhật orderGroup
+        await checkAndCompleteOrderGroup(order.orderGroupId);
+      }
+
+      return updatedOrder;
     });
   },
 };
