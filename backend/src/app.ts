@@ -4,33 +4,21 @@ dotenv.config();
 import cookieParser from 'cookie-parser';
 import { successResponse } from './shared/utils/response';
 import { globalErrorHandler } from './shared/middleware/error.middleware';
-import authRoutes from './modules/auth/auth.routes';
-import userRoutes from './modules/user/user.routes';
-import shopRoutes from './modules/shop/shop.routes';
-import categoryRoutes from './modules/category/category.routes';
-import productRoutes from './modules/products/product.routes';
-import cartRoutes from './modules/cart/cart.routes';
-import orderRoutes from './modules/order/order.routes';
-import adminRoutes from './modules/admin/admin.routes';
-import paymentRoutes from './modules/payment/payment.routes';
 import { setupCron } from './jobs/cron';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './core/config/swagger';
+import { registerRoutes } from './routes';
 
 const app: Application = express();
-setupCron();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Middleware để đọc cookie
 
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/shops', shopRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/payment', paymentRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+setupCron();
+
+registerRoutes(app);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
