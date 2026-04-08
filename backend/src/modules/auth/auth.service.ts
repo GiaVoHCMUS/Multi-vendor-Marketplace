@@ -98,9 +98,6 @@ export const authService = {
         fullName: user.fullName,
         avatarUrl: user.avatarUrl,
         bio: user.bio,
-        isVerified: user.isVerified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
       },
       ...tokens,
     };
@@ -115,20 +112,33 @@ export const authService = {
     const decoded = tokenUtils.verifyRefreshToken(oldRefreshToken);
     const { sub: userId, role, tokenId } = decoded;
 
-    // Lấy token đã lưu trong Session Service
-    const savedToken = await sessionService.getSession(userId, tokenId);
+    // Kiểm tra xem tokenId này đã nằm trong danh sách đã dùng chưa
+    const ownerId = await sessionService.getUsedTokenOwner(tokenId);
 
-    // Trường hợp 1: Token đã bị xóa hoặc hết hạn
-    if (!savedToken) {
-      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, 401);
-    }
-
-    // Trường hợp 2: Token cũ bị dùng lại
-    if (savedToken !== oldRefreshToken) {
+    if (ownerId) {
+      // Nếu tồn tại ownerId nghĩa là tokenId này vừa được dùng để refresh thành công trước đó
+      // Token bị dùng lại
       await sessionService.deleteAllSessions(userId);
       throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, 403);
     }
 
+    // Lấy token đã lưu trong Session Service
+    const savedToken = await sessionService.getSession(userId, tokenId);
+
+    // Token đã bị xóa hoặc hết hạn
+    if (!savedToken) {
+      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, 401);
+    }
+
+    // So sánh tính hợp lệ của token (đề phòng tokenId cũ bị giả mạo)
+    if (savedToken !== oldRefreshToken) {
+      // Xóa tất cả session đang đăng nhập
+      await sessionService.deleteAllSessions(userId);
+      throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, 403);
+    }
+
+    // Thực hiện Rotation
+    await sessionService.markTokenAsUsed(tokenId, userId);
     await sessionService.deleteSession(userId, tokenId);
 
     // Cấp session mới
