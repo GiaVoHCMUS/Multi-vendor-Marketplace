@@ -9,10 +9,13 @@ import { sessionService } from '@/core/cache/session.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { redisClient } from '@/core/cache/redis';
+import {
+  AUTH_TOKEN_KEYS,
+  AUTH_TOKEN_TTL,
+} from '@/shared/constants/auth-token.constants';
+import { SESSION_TTL } from '@/shared/constants/session.constants';
 
 const redis = redisClient.getInstance();
-const RT_EXPIRES_IN_DAYS = 14;
-const RT_TTL = RT_EXPIRES_IN_DAYS * 24 * 60 * 60;
 
 // src/modules/auth/auth.service.ts
 export const authService = {
@@ -26,7 +29,12 @@ export const authService = {
     const refreshToken = tokenUtils.generateRefreshToken(userId, role, tokenId);
 
     // Lưu vào Redis: session:userId:tokenId
-    await sessionService.createSession(userId, tokenId, refreshToken, RT_TTL);
+    await sessionService.createSession(
+      userId,
+      tokenId,
+      refreshToken,
+      SESSION_TTL.REFRESH_TOKEN_TTL,
+    );
 
     return { accessToken, refreshToken };
   },
@@ -48,9 +56,8 @@ export const authService = {
 
     // Tạo token xác thực và lưu vào Redis
     const verificationToken = uuidv4();
-    const VERIFY_TTL = 10 * 60;
-    await redis.set(`verify-email:${verificationToken}`, user.id, {
-      EX: VERIFY_TTL,
+    await redis.set(AUTH_TOKEN_KEYS.verifyEmail(verificationToken), user.id, {
+      EX: AUTH_TOKEN_TTL.VERIFY_EMAIL,
     });
 
     await mailJob.sendWelcomeRegistration({
@@ -61,7 +68,7 @@ export const authService = {
   },
 
   verifyEmail: async (token: string) => {
-    const userId = await redis.get(`verify-email:${token}`);
+    const userId = await redis.get(AUTH_TOKEN_KEYS.verifyEmail(token));
     if (!userId) {
       throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, 400);
     }
@@ -72,7 +79,7 @@ export const authService = {
     });
 
     // Xóa token sau khi dùng xong
-    await redis.del(`verify-email:${token}`);
+    await redis.del(AUTH_TOKEN_KEYS.verifyEmail(token));
   },
 
   login: async (email: string, password: string) => {
@@ -155,9 +162,8 @@ export const authService = {
     }
 
     const resetToken = uuidv4();
-    const RESET_TTL = 10 * 60;
-    await redis.set(`reset-password:${resetToken}`, user.id, {
-      EX: RESET_TTL,
+    await redis.set(AUTH_TOKEN_KEYS.resetPassword(resetToken), user.id, {
+      EX: AUTH_TOKEN_TTL.RESET_PASSWORD,
     });
 
     // Gửi mail Reset Password qua Queue
@@ -169,7 +175,7 @@ export const authService = {
   },
 
   resetPassword: async (token: string, password: string) => {
-    const userId = await redis.get(`reset-password:${token}`);
+    const userId = await redis.get(AUTH_TOKEN_KEYS.resetPassword(token));
 
     if (!userId) {
       throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, 400);
@@ -184,7 +190,7 @@ export const authService = {
       },
     });
 
-    await redis.del(`reset-password:${token}`);
+    await redis.del(AUTH_TOKEN_KEYS.resetPassword(token));
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
     await sessionService.deleteAllSessions(userId);
   },
