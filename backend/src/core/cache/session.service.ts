@@ -26,7 +26,10 @@ export const sessionService = {
 
     await redis.sAdd(userSessionsKey, tokenId);
 
-    await redis.expire(userSessionsKey, ttl + 3600);
+    await redis.expire(
+      userSessionsKey,
+      ttl + SESSION_TTL.USER_SESSIONS_TTL_BUFFER,
+    );
   },
 
   // Lấy ra một session của userId trong Redis.
