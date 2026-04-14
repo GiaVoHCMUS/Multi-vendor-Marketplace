@@ -16,39 +16,39 @@ export const cartController = {
   addToCart: catchAsync(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    const cart = await cartService.addToCart(userId, req.body);
+    await cartService.addToCart(userId, req.body);
 
-    successResponse(res, 200, MESSAGE.CART.ADD_PRODUCT_SUCCESS, cart);
+    successResponse(res, 200, MESSAGE.CART.ADD_PRODUCT_SUCCESS);
   }),
 
   updateItem: catchAsync(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    const cart = await cartService.updateItem(
+    await cartService.updateItem(
       userId,
       req.params.productId as string,
       req.body.quantity,
     );
 
-    successResponse(res, 200, MESSAGE.CART.UPDATE_SUCCESS, cart);
+    successResponse(res, 200, MESSAGE.CART.UPDATE_SUCCESS);
   }),
 
   removeFromCart: catchAsync(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    const cart = await cartService.removeFromCart(
+    await cartService.removeFromCart(
       userId,
       req.params.productId as string,
     );
 
-    successResponse(res, 200, MESSAGE.CART.REMOVE_PRODUCT_SUCCESS, cart);
+    successResponse(res, 200, MESSAGE.CART.REMOVE_PRODUCT_SUCCESS);
   }),
 
   clearCart: catchAsync(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    const cart = await cartService.clearCart(userId);
+    await cartService.clearCart(userId);
 
-    successResponse(res, 200, MESSAGE.CART.CLEAR_SUCCESS, cart);
+    successResponse(res, 200, MESSAGE.CART.CLEAR_SUCCESS);
   }),
 };

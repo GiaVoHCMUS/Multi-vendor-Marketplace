@@ -3,13 +3,14 @@ import { AddToCartInput } from './cart.type';
 import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { ProductStatus } from '@prisma/client';
 
 const redis = redisClient.getInstance();
 const CART_TTL = 7 * 24 * 60 * 60;
-const getCartKey = (userId: string) => `cart:${userId}`;
+const getCartKey = (userId: string) => `maketplace:cart:${userId}`;
 
 export const cartService = {
-  getCart: async (userId: string) => {
+  async getCart(userId: string) {
     const items = await redis.hGetAll(getCartKey(userId));
 
     const cartItems = Object.entries(items ?? {}).map(
@@ -30,7 +31,7 @@ export const cartService = {
       where: {
         id: { in: productIds },
         deletedAt: null,
-        status: 'PUBLISHED',
+        status: ProductStatus.PUBLISHED,
       },
       include: {
         images: {
@@ -66,22 +67,22 @@ export const cartService = {
           shop: product.shop,
         };
       })
-      .filter(Boolean);
+      .filter((item) => item !== null);
 
     const totalItems = populatedItems.reduce(
-      (acc, item: any) => acc + item.quantity,
+      (acc, item) => acc + item.quantity,
       0,
     );
 
     return { items: populatedItems, totalItems };
   },
 
-  addToCart: async (userId: string, item: AddToCartInput) => {
+  async addToCart(userId: string, item: AddToCartInput) {
     const product = await prisma.product.findFirst({
       where: {
         id: item.productId,
         deletedAt: null,
-        status: 'PUBLISHED',
+        status: ProductStatus.PUBLISHED,
       },
     });
 
@@ -98,14 +99,12 @@ export const cartService = {
       throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, 400);
     }
 
-    await redis.hIncrBy(getCartKey(userId), item.productId, item.quantity);
+    await redis.hIncrBy(cartKey, item.productId, item.quantity);
 
     await redis.expire(cartKey, CART_TTL);
-
-    return cartService.getCart(userId);
   },
 
-  updateItem: async (userId: string, productId: string, quantity: number) => {
+  async updateItem(userId: string, productId: string, quantity: number) {
     const cartKey = getCartKey(userId);
 
     const exists = await redis.hExists(cartKey, productId);
@@ -118,7 +117,7 @@ export const cartService = {
       where: {
         id: productId,
         deletedAt: null,
-        status: 'PUBLISHED',
+        status: ProductStatus.PUBLISHED,
       },
     });
 
@@ -133,24 +132,15 @@ export const cartService = {
     await redis.hSet(cartKey, productId, quantity);
 
     await redis.expire(cartKey, CART_TTL);
-
-    return cartService.getCart(userId);
   },
 
-  removeFromCart: async (userId: string, productId: string) => {
+  async removeFromCart(userId: string, productId: string) {
     const cartKey = getCartKey(userId);
 
     await redis.hDel(cartKey, productId);
-
-    return cartService.getCart(userId);
   },
 
-  clearCart: async (userId: string) => {
+  async clearCart(userId: string) {
     await redis.del(getCartKey(userId));
-
-    return {
-      items: [],
-      totalItems: 0,
-    };
   },
 };
