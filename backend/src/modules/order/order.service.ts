@@ -199,42 +199,58 @@ export const orderService = {
         orderGroup: { userId },
       }))
       .sort()
-      .build();
+      .select({
+        id: true,
+        orderGroupId: true,
+        shopId: true,
+        totalAmount: true,
+        status: true,
+        payoutStatus: true,
+        payoutAt: true,
 
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        ...prismaArgs,
-        include: {
-          shop: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
           },
-          orderItems: {
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  price: true,
-                  images: {
-                    take: 1,
+        },
+        orderItems: {
+          select: {
+            id: true,
+            productId: true,
+            quantity: true,
+            priceAtPurchase: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                price: true,
+                images: {
+                  take: 1,
+                  select: {
+                    id: true,
+                    url: true,
                   },
                 },
               },
             },
           },
-          orderGroup: {
-            select: {
-              paymentStatus: true,
-              paymentMethod: true,
-              createdAt: true,
-            },
+        },
+        orderGroup: {
+          select: {
+            shippingAddress: true,
+            shippingName: true,
+            shippingPhone: true,
           },
         },
+      })
+      .build();
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        ...prismaArgs,
         orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
       }),
 
@@ -246,7 +262,7 @@ export const orderService = {
     }
 
     return {
-      data: orders,
+      orders,
       meta: buildOffsetMeta({
         totalItems: total,
         page: meta.page,

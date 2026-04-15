@@ -53,9 +53,11 @@ enum TransactionType {
 }
 
 enum PayoutStatus {
-  PENDING     // chưa xử lý
-  HOLDING     // đã thanh toán nhưng system đang giữ tiền
-  PAID_OUT    // đã trả cho seller
+  PENDING             // chưa xử lý
+  HOLDING             // đã thanh toán nhưng system đang giữ tiền
+  PAID_OUT            // đã trả cho seller
+  FAILED_PAYMENT      // thanh toán không thành công
+  REFUNDED            // đã hoàn tiên sau khi payout
 }
 
 // --- MODELS ---

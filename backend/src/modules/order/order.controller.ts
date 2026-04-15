@@ -10,16 +10,19 @@ export const orderController = {
       req.headers['x-forwarded-for']?.toString().split(',')[0] ||
       req.socket.remoteAddress ||
       '';
-      
+
     const order = await orderService.checkout(req.user!.id, ipAddr, req.body);
 
     successResponse(res, 201, MESSAGE.ORDER.CHECKOUT_SUCCESS, order);
   }),
 
   getMyOrders: catchAsync(async (req: Request, res: Response) => {
-    const orders = await orderService.getMyOrders(req.user!.id, req.query);
+    const { orders, meta } = await orderService.getMyOrders(
+      req.user!.id,
+      req.query,
+    );
 
-    successResponse(res, 200, MESSAGE.ORDER.GET_LIST_SUCCESS, orders);
+    successResponse(res, 200, MESSAGE.ORDER.GET_LIST_SUCCESS, orders, meta);
   }),
 
   getOrderDetail: catchAsync(async (req: Request, res: Response) => {

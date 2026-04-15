@@ -6,6 +6,16 @@ export const orderSchema = {
   getMyOrder: z.object({
     body: emptySchema,
     query: z.object({
+      page: z.coerce
+        .number({ message: 'Trang phải là một con số' })
+        .int({ message: 'Trang phải là số nguyên' })
+        .positive({ message: 'Trang phải là số nguyên dương' })
+        .default(1),
+      limit: z.coerce
+        .number({ message: 'Trang phải là một con số' })
+        .int({ message: 'Trang phải là số nguyên' })
+        .positive({ message: 'Trang phải là số nguyên dương' })
+        .default(10),
       status: z.enum(OrderStatus).optional(),
     }),
     params: emptySchema,
