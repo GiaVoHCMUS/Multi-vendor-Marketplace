@@ -24,7 +24,12 @@ export const categoryService = {
       async () => {
         return prisma.category.findMany({
           orderBy: { id: 'desc' },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            imageUrl: true,
+            parent: true,
             children: true,
           },
         });
@@ -41,6 +46,13 @@ export const categoryService = {
       async () => {
         const category = await prisma.category.findUnique({
           where: { slug },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            imageUrl: true,
+            parentId: true,
+          },
         });
         if (!category) {
           throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
