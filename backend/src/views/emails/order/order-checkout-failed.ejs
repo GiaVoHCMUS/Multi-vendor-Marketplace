@@ -1,0 +1,52 @@
+<h3 style="color:#333;margin-bottom:10px;">
+  Xin chào <%= customerName %>,
+</h3>
+
+<p style="font-size:14px;color:#555;line-height: 1.5;">
+  Chúng tôi nhận thấy giao dịch thanh toán qua <b>VNPAY</b> cho đơn hàng của bạn đã <b>không hoàn tất</b>.
+</p>
+
+<div style="background-color: #fff5f5; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0;">
+  <p style="font-size:14px; color: #b02a37; margin: 0;">
+    <b>Trạng thái:</b> Giao dịch bị hủy hoặc đã quá thời gian chờ thanh toán.
+  </p>
+</div>
+
+<p style="font-size:14px;color:#555;">
+  Chi tiết đơn hàng liên quan:
+</p>
+
+<p style="font-size:18px;font-weight:bold;color:#111;">
+  #<%= orderId %>
+</p>
+
+<hr style="margin:20px 0;border:none;border-top:1px solid #eee;" />
+
+<p style="font-size:14px;color:#555;">
+  Tổng số tiền cần thanh toán:
+</p>
+
+<p style="font-size:20px;font-weight:bold;color:#dc3545;">
+  <%= totalAmount %> VND
+</p>
+
+<hr style="margin:20px 0;border:none;border-top:1px solid #eee;" />
+
+<p style="font-size:14px;color:#555;">
+  Vì giao dịch không thành công, đơn hàng của bạn có thể đã bị tạm dừng hoặc hủy theo quy định của hệ thống. 
+</p>
+
+<p style="font-size:14px;color:#555;">
+  Nếu bạn vẫn muốn sở hữu các sản phẩm này, vui lòng quay lại giỏ hàng để thực hiện lại việc đặt hàng hoặc thanh toán bằng phương thức khác.
+</p>
+
+<div style="text-align: center; margin: 30px 0;">
+  <a href="<%= appUrl %>/orders" style="background-color: #333; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
+    Quay lại đơn hàng của tôi
+  </a>
+</div>
+
+<p style="margin-top:20px;font-size:14px;">
+  Trân trọng,<br/>
+  <b>Đội ngũ <%= appName %></b>
+</p>

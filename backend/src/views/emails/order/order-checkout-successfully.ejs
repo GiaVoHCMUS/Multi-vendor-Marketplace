@@ -1,0 +1,35 @@
+<h3 style="color: #333; margin-bottom: 10px">Xin chào <%= customerName %>,</h3>
+
+<p style="font-size: 14px; color: #555">
+  Chúc mừng! Đơn hàng của bạn đã được <b>thanh toán thành công</b> qua cổng
+  thanh toán <b>VNPAY</b>. 🎉
+</p>
+
+<p style="font-size: 14px; color: #555">Mã đơn hàng của bạn là:</p>
+
+<p style="font-size: 18px; font-weight: bold; color: #111">#<%= orderId %></p>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+<p style="font-size: 14px; color: #555">Tổng số tiền đã thanh toán:</p>
+
+<p style="font-size: 20px; font-weight: bold; color: #28a745">
+  <%= totalAmount %> VND
+</p>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #eee" />
+
+<p style="font-size: 14px; color: #555">
+  Hệ thống đã ghi nhận thanh toán của bạn. Chúng tôi sẽ tiến hành bàn giao đơn
+  hàng cho đơn vị vận chuyển trong thời gian sớm nhất.
+</p>
+
+<p style="font-size: 14px; color: #555">
+  Bạn có thể theo dõi hành trình đơn hàng trong phần
+  <b>Lịch sử mua hàng</b> trên ứng dụng của chúng tôi.
+</p>
+
+<p style="margin-top: 20px; font-size: 14px">
+  Trân trọng,<br />
+  <b>Đội ngũ <%= appName %></b>
+</p>
