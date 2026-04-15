@@ -6,6 +6,8 @@ export const EMAIL = {
     CONFIRMATION: 'Xác nhận đơn hàng',
     AUTO_CANCELLED: (orderId: string) =>
       `Đơn hàng ${orderId} bị hủy do không hoạt động`,
+    CHECKOUT_SUCCESSFULLY: 'Xác nhận thanh toán thành công',
+    CHECKOUT_FAILED: 'Thanh toán thất bại',
   },
   SHOP: {
     APPROVAL: 'Phê duyệt cửa hàng',
@@ -24,6 +26,8 @@ export const EMAIL_TEMPLATE = {
   ORDER: {
     CONFIRMATION: 'order/order-confirmation',
     AUTO_CANCELLED: 'order/order-auto-cancelled',
+    CHECKOUT_SUCCESSFULLY: 'order/order-checkout-successfully',
+    CHECKOUT_FAILED: 'order/order-checkout-failed',
   },
   SHOP: {
     APPROVAL: 'shop/shop-approved',

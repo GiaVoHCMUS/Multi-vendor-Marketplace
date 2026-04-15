@@ -4,6 +4,8 @@ import {
   DailyReportMail,
   ForgotPasswordMail,
   OrderCancelledMail,
+  orderCheckoutFailedMail,
+  OrderCheckoutSuccessfullyMail,
   OrderConfirmation,
   ShopApproved,
   ShopBanned,
@@ -40,5 +42,19 @@ export const mailJob = {
 
   sendOrderCancelled: async (data: OrderCancelledMail) => {
     await mailQueue.add(JOB_NAME.EMAIL.ORDER_AUTO_CANCELLED, data, config);
+  },
+
+  sendOrderCheckoutSuccessfully: async (
+    data: OrderCheckoutSuccessfullyMail,
+  ) => {
+    await mailQueue.add(
+      JOB_NAME.EMAIL.ORDER_CHECKOUT_SUCCESSFULLY,
+      data,
+      config,
+    );
+  },
+
+  sendOrderCheckoutFailed: async (data: orderCheckoutFailedMail) => {
+    await mailQueue.add(JOB_NAME.EMAIL.ORDER_CHECKOUT_FAILED, data, config);
   },
 };

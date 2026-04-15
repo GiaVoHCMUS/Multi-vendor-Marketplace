@@ -4,6 +4,8 @@ import {
   DailyReportMail,
   ForgotPasswordMail,
   OrderCancelledMail,
+  orderCheckoutFailedMail,
+  OrderCheckoutSuccessfullyMail,
   OrderConfirmation,
   ShopApproved,
   ShopBanned,
@@ -99,6 +101,34 @@ export const handleSendEmail = {
         orderId,
         totalAmount,
         shippingAddress,
+      },
+    );
+  },
+
+  orderCheckoutSuccessfully: async (data: OrderCheckoutSuccessfullyMail) => {
+    const { to, customerName, orderId, totalAmount } = data;
+    await mailService.sendWithTemplate(
+      to,
+      EMAIL.ORDER.CHECKOUT_SUCCESSFULLY,
+      EMAIL_TEMPLATE.ORDER.CHECKOUT_SUCCESSFULLY,
+      {
+        customerName,
+        orderId,
+        totalAmount,
+      },
+    );
+  },
+
+  orderCheckoutFailed: async (data: orderCheckoutFailedMail) => {
+    const { to, customerName, orderId, totalAmount } = data;
+    await mailService.sendWithTemplate(
+      to,
+      EMAIL.ORDER.CHECKOUT_FAILED,
+      EMAIL_TEMPLATE.ORDER.CHECKOUT_FAILED,
+      {
+        customerName,
+        orderId,
+        totalAmount,
       },
     );
   },

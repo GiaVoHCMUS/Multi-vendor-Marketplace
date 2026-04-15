@@ -45,3 +45,17 @@ export type OrderCancelledMail = {
   totalAmount: number;
   shippingAddress: string;
 };
+
+export type OrderCheckoutSuccessfullyMail = {
+  to: string;
+  customerName: string;
+  orderId: string;
+  totalAmount: number;
+}
+
+export type orderCheckoutFailedMail = {
+  to: string;
+  customerName: string;
+  orderId: string;
+  totalAmount: number;
+};

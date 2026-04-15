@@ -35,6 +35,14 @@ const worker = new Worker(
         await handleSendEmail.orderAutoCancelled(job.data);
         break;
       }
+      case JOB_NAME.EMAIL.ORDER_CHECKOUT_SUCCESSFULLY: {
+        await handleSendEmail.orderCheckoutSuccessfully(job.data);
+        break;
+      }
+      case JOB_NAME.EMAIL.ORDER_CHECKOUT_FAILED: {
+        await handleSendEmail.orderCheckoutFailed(job.data);
+        break;
+      }
       default: {
         throw new Error('Không tìm thấy tên job');
       }
