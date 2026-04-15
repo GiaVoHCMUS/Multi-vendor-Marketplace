@@ -1,7 +1,7 @@
 {
   "name": "marketplace-backend",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only --watch src/docs -r tsconfig-paths/register src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
@@ -9,6 +9,7 @@
     "worker": "ts-node-dev -r tsconfig-paths/register src/jobs/workers/index.ts"
   },
   "dependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@prisma/client": "^6.19.2",
@@ -24,6 +25,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.2",
+    "rate-limiter-flexible": "^11.0.0",
     "redis": "^5.11.0",
     "slugify": "^1.6.8",
     "swagger-jsdoc": "^6.2.8",
