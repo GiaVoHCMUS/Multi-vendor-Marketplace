@@ -19,7 +19,7 @@ import { paymentService } from '../payment/payment.service';
 
 const redis = redisClient.getInstance();
 
-const getCartKey = (userId: string) => `cart:${userId}`;
+const getCartKey = (userId: string) => `marketplace:cart:${userId}`;
 
 export const orderService = {
   async checkout(userId: string, ipAddr: string, data: CheckoutInput) {
@@ -35,18 +35,20 @@ export const orderService = {
       throw new AppError(MESSAGE.USER.NOT_FOUND, 404);
     }
 
-    const cart = await redis.hGetAll(getCartKey(userId));
+    const items = await redis.hGetAll(getCartKey(userId));
 
-    if (!cart || Object.keys(cart).length === 0) {
+    const cartItems = Object.entries(items ?? {}).map(
+      ([productId, quantity]) => ({
+        productId,
+        quantity: Number(quantity),
+      }),
+    );
+
+    if (cartItems.length == 0) {
       throw new AppError('Giỏ hàng rỗng', 400);
     }
 
-    const items = Object.entries(cart).map(([productId, quantity]) => ({
-      productId,
-      quantity: Number(quantity),
-    }));
-
-    const productIds = items.map((i) => i.productId);
+    const productIds = cartItems.map((i) => i.productId);
 
     const products = await prisma.product.findMany({
       where: {
@@ -59,15 +61,12 @@ export const orderService = {
         shopId: true,
         categoryId: true,
         name: true,
-        slug: true,
         price: true,
         stock: true,
-        status: true,
-        averageRating: true,
       },
     });
 
-    if (products.length !== items.length) {
+    if (products.length !== cartItems.length) {
       throw new AppError(MESSAGE.ORDER.INVALID_PRODUCTS, 400);
     }
 
@@ -75,7 +74,7 @@ export const orderService = {
 
     let totalAmount: number = 0;
 
-    const orderItems = items.map((item) => {
+    const orderItems = cartItems.map((item) => {
       const product = productMap.get(item.productId)!;
 
       if (item.quantity > product.stock) {
@@ -93,7 +92,7 @@ export const orderService = {
       };
     });
 
-    // Group theo shop
+    // Group sản phẩm theo nhóm
     const shopMap = new Map<string, typeof orderItems>();
 
     for (const item of orderItems) {
@@ -106,17 +105,21 @@ export const orderService = {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // 1. Lưu orderGroup vào database
       const orderGroup = await tx.orderGroup.create({
         data: {
           userId,
           totalAmount,
           paymentMethod: data.paymentMethod,
+          paymentStatus: PaymentStatus.PENDING,
           shippingName: data.shippingName,
           shippingPhone: data.shippingPhone,
           shippingAddress: data.shippingAddress,
         },
       });
 
+      // 2. Chia các orderGroup đó thành các Order nhỏ hơn (theo Shop)
+      // Tạo Order theo từng shop và lưu OrderItem cho cho Order này, cũng như trừ số lượng Products của seller
       for (const [shopId, items] of shopMap) {
         const shopTotal: number = items.reduce(
           (sum, item) => sum + item.price * item.quantity,
@@ -128,6 +131,7 @@ export const orderService = {
             orderGroupId: orderGroup.id,
             shopId,
             totalAmount: shopTotal,
+            status: OrderStatus.PENDING,
           },
         });
 
@@ -143,11 +147,7 @@ export const orderService = {
 
           await tx.product.update({
             where: { id: item.product.id },
-            data: {
-              stock: {
-                decrement: item.quantity,
-              },
-            },
+            data: { stock: { decrement: item.quantity } },
           });
         }
       }
@@ -155,10 +155,10 @@ export const orderService = {
       return orderGroup;
     });
 
-    await redis.del(getCartKey(userId));
-
     if (data.paymentMethod === PaymentMethod.COD) {
-      // COD -> gửi mail ngay
+      // COD -> xóa cart và gửi mail ngay
+      await redis.del(getCartKey(userId));
+
       await mailJob.sendOrderConfirmation({
         to: user.email,
         customerName: user.fullName,
@@ -170,7 +170,7 @@ export const orderService = {
 
     if (data.paymentMethod === PaymentMethod.VNPAY) {
       // VNPAY -> tạo payment URL (gọi payment service)
-      const { paymentUrl } = await paymentService.createPayment({
+      const paymentUrl = await paymentService.createPayment({
         orderGroupId: result.id,
         provider: PaymentMethod.VNPAY,
         ipAddr,
@@ -256,17 +256,39 @@ export const orderService = {
       select: {
         id: true,
         orderGroupId: true,
-        shopId: true,
         totalAmount: true,
         status: true,
+        updatedAt: true,
 
-        shop: true,
+        shop: {
+          select: {
+            id: true,
+            ownerId: true,
+            name: true,
+            slug: true,
+            logoUrl: true,
+          },
+        },
 
         orderItems: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            priceAtPurchase: true,
+
             product: {
-              include: {
-                images: true,
+              select: {
+                id: true,
+                name: true,
+                price: true,
+
+                images: {
+                  select: {
+                    id: true,
+                    url: true,
+                    order: true,
+                  },
+                },
               },
             },
           },
@@ -281,7 +303,7 @@ export const orderService = {
             shippingPhone: true,
             shippingAddress: true,
 
-            createdAt: true,
+            updatedAt: true,
           },
         },
 
@@ -323,7 +345,7 @@ export const orderService = {
     const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
       PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
       CONFIRMED: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
-      SHIPPING: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+      SHIPPING: [OrderStatus.DELIVERED],
       DELIVERED: [],
       CANCELLED: [],
     };
@@ -342,6 +364,7 @@ export const orderService = {
         data: { status: nextStatus },
       });
 
+      // Nếu Seller cập nhật đơn hàng là đã bị hủy
       if (nextStatus === OrderStatus.CANCELLED) {
         for (const item of order.orderItems) {
           await tx.product.update({
@@ -368,6 +391,7 @@ export const orderService = {
         });
       }
 
+      // Nếu Seller cập nhật đơn hàng là đã giao hàng thành công
       if (
         nextStatus === OrderStatus.DELIVERED &&
         order.orderGroup.paymentMethod === PaymentMethod.COD

@@ -7,7 +7,7 @@ import { ProductStatus } from '@prisma/client';
 
 const redis = redisClient.getInstance();
 const CART_TTL = 7 * 24 * 60 * 60;
-const getCartKey = (userId: string) => `maketplace:cart:${userId}`;
+const getCartKey = (userId: string) => `marketplace:cart:${userId}`;
 
 export const cartService = {
   async getCart(userId: string) {
