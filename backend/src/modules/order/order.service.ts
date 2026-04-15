@@ -16,6 +16,7 @@ import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { checkAndCompleteOrderGroup } from './order.helper';
 import { paymentService } from '../payment/payment.service';
+import { CACHE_KEYS } from '@/shared/constants/cache.constants';
 
 const redis = redisClient.getInstance();
 
@@ -61,6 +62,7 @@ export const orderService = {
         shopId: true,
         categoryId: true,
         name: true,
+        slug: true,
         price: true,
         stock: true,
       },
@@ -154,6 +156,14 @@ export const orderService = {
 
       return orderGroup;
     });
+
+    // Invalidate cache
+    const pipeline = redis.multi();
+    products.forEach((product) =>
+      pipeline.del(CACHE_KEYS.PRODUCT.SLUG(product.slug)),
+    );
+    pipeline.incr(CACHE_KEYS.PRODUCT.TRACKER_LIST);
+    await pipeline.exec();
 
     if (data.paymentMethod === PaymentMethod.COD) {
       // COD -> xóa cart và gửi mail ngay
