@@ -23,6 +23,7 @@ export class PrismaQueryHelper<
     take?: number;
     skip?: number;
     cursor?: any;
+    select?: Record<string, boolean | object>;
   } = { where: {} as TWhereInput };
 
   private meta: PaginationMeta | null = null;
@@ -154,5 +155,10 @@ export class PrismaQueryHelper<
       prismaArgs: this.prismaQuery,
       meta: this.meta,
     };
+  }
+
+  select(fields: Record<string, boolean | object>) {
+    this.prismaQuery.select = fields;
+    return this;
   }
 }
