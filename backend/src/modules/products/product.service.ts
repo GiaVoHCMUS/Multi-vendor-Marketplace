@@ -237,9 +237,33 @@ export const productService = {
       async () => {
         const product = await prisma.product.findUnique({
           where: { slug },
-          include: {
-            category: true,
-            shop: true,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            price: true,
+            stock: true,
+            averageRating: true,
+
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                imageUrl: true,
+                parentId: true,
+              },
+            },
+            shop: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                description: true,
+                logoUrl: true,
+              },
+            },
             reviews: true,
           },
         });

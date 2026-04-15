@@ -75,7 +75,7 @@ export const productSchema = {
         (data) =>
           !data.minPrice || !data.maxPrice || data.minPrice <= data.maxPrice,
         {
-          message: 'minPrice phải <= maxPrice',
+          message: 'minPrice phải nhỏ hơn hoặc bằng maxPrice',
           path: ['minPrice'],
         },
       ),
