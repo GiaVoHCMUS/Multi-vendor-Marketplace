@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import { PaymentService } from './payment.service';
+import { paymentService } from './payment.service';
 import { catchAsync } from '@/shared/utils/catchAsync';
 import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
-
-const paymentService = new PaymentService();
 
 export const paymentController = {
   // create payment

@@ -7,10 +7,15 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  PayoutStatus,
   TransactionType,
 } from '@prisma/client';
+import { redisClient } from '@/core/cache/redis';
+import { mailJob } from '@/jobs/mail/mail.job';
 
-export class PaymentService {
+const redis = redisClient.getInstance();
+
+class PaymentService {
   private vnpay = new VNPayProvider();
 
   // create payment
@@ -33,11 +38,11 @@ export class PaymentService {
         ipAddr: input.ipAddr,
       });
 
-      return { paymentUrl };
+      return paymentUrl;
     }
 
-    // COD
-    return { message: 'Người dùng thanh toán khi nhận hàng' };
+    // Có lỗi thì return là null
+    return null;
   }
 
   async handleVNPayIPN(query: Record<string, string>) {
@@ -62,8 +67,8 @@ export class PaymentService {
       return { RspCode: '01', Message: 'Order not found' };
     }
 
-    if (orderGroup.paymentStatus === PaymentStatus.COMPLETED) {
-      return { RspCode: '00', Message: 'Already confirmed' };
+    if (orderGroup.paymentStatus !== PaymentStatus.PENDING) {
+      return { RspCode: '02', Message: 'Order already confirmed' };
     }
 
     const amount = Number(query['vnp_Amount']) / 100;
@@ -72,31 +77,101 @@ export class PaymentService {
     }
 
     await prisma.$transaction(async (tx) => {
-      // 1. Update OrderGroup
-      await tx.orderGroup.update({
-        where: { id: orderGroupId },
-        data: {
-          paymentStatus: success
-            ? PaymentStatus.COMPLETED
-            : PaymentStatus.FAILED,
-        },
-      });
+      if (success) {
+        // Thanh toán thành công
+        // 1. Update OrderGroup
+        await tx.orderGroup.update({
+          where: { id: orderGroupId },
+          data: {
+            paymentStatus: PaymentStatus.COMPLETED,
+            paidAt: new Date(),
+          },
+        });
 
-      // 2. Update tất cả Order con
-      await tx.order.updateMany({
-        where: { orderGroupId },
-        data: {
-          status: success ? OrderStatus.PAID : OrderStatus.CANCELLED,
-        },
-      });
+        // 2. Update tất cả Order con
+        await tx.order.updateMany({
+          where: { orderGroupId },
+          data: {
+            status: OrderStatus.CONFIRMED,
+            payoutStatus: PayoutStatus.PAID_OUT,
+            payoutAt: new Date(),
+          },
+        });
 
-      // 3. Tạo Transaction log
+        await redis.del(`marketplace:cart:${orderGroup.userId}`);
+
+        const user = await tx.user.findUnique({
+          where: { id: orderGroup.userId },
+          select: { email: true, fullName: true },
+        });
+
+        if (user) {
+          await mailJob.sendOrderCheckoutSuccessfully({
+            to: user.email,
+            customerName: user.fullName,
+            orderId: orderGroupId,
+            totalAmount: Number(orderGroup.totalAmount),
+          });
+        }
+        console.log('THANH TOÁN VNPAY THÀNH CÔNG');
+        console.log('GỬI EMAIL THÀNH CÔNG');
+        
+      } else {
+        // Thanh toán thất bại
+        await tx.orderGroup.update({
+          where: { id: orderGroupId },
+          data: { paymentStatus: PaymentStatus.FAILED },
+        });
+
+        for (const order of orderGroup.orders) {
+          // Cập nhật trạng thái đơn con thành CANCELLED
+          await tx.order.update({
+            where: { id: order.id },
+            data: { status: OrderStatus.CANCELLED },
+          });
+
+          const orderItems = await tx.orderItem.findMany({
+            where: { orderId: order.id },
+          });
+
+          // Hoàn stock từng sản phẩm
+          for (const item of orderItems) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: item.quantity } }, // Trả lại hàng vào kho
+            });
+          }
+
+          // Gửi mail hủy đơn hàng nữa
+          const user = await tx.user.findUnique({
+            where: { id: orderGroup.userId },
+            select: { email: true, fullName: true },
+          });
+
+          if (user) {
+            await mailJob.sendOrderCheckoutFailed({
+              to: user.email,
+              customerName: user.fullName,
+              orderId: orderGroupId,
+              totalAmount: Number(orderGroup.totalAmount),
+            });
+          }
+
+          console.log('THANH TOÁN VNPAY THẤT BẠI');
+          console.log('GỬI MAIL HỦY ĐƠN HÀNG');
+        }
+      }
+
+      // Tạo Transaction log transaction cho cả 2 trường hợp
       await tx.transaction.create({
         data: {
           orderGroupId,
           amount: orderGroup.totalAmount,
           type: TransactionType.PAYMENT,
           status: success ? PaymentStatus.COMPLETED : PaymentStatus.FAILED,
+          description: success
+            ? 'VNPAY: Thanh toán thành công'
+            : 'VNPAY: Thanh toán thất bại/hủy',
         },
       });
     });
@@ -108,13 +183,16 @@ export class PaymentService {
     const isValid = this.vnpay.verifyReturn(query);
 
     if (!isValid) {
-      return { success: false };
+      return { success: false, message: 'Chữ ký không hợp lệ!' };
     }
 
     const responseCode = query['vnp_ResponseCode'];
 
     return {
       success: responseCode === '00',
+      orderId: query['vnp_TxnRef'],
     };
   }
 }
+
+export const paymentService = new PaymentService();
