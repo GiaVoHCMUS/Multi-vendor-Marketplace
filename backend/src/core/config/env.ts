@@ -32,4 +32,7 @@ export const env = {
   // Redis Config
   REDIS_HOST: process.env.REDIS_HOST as string,
   REDIS_PORT: Number(process.env.REDIS_PORT),
+
+  // Upstash
+  REDIS_URL: process.env.REDIS_URL as string,
 };

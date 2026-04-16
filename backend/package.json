@@ -2,11 +2,12 @@
   "name": "marketplace-backend",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --watch src/docs -r tsconfig-paths/register src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc && tsc-alias",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src",
-    "worker": "ts-node-dev -r tsconfig-paths/register src/jobs/workers/index.ts"
+    "worker:dev": "ts-node-dev -r tsconfig-paths/register src/jobs/workers/index.ts",
+    "worker": "node dist/jobs/workers/index.js"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
