@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { adminController } from './admin.controller';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { adminSchema } from './admin.schema';
+import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
@@ -11,35 +12,39 @@ router.use(restrictTo('ADMIN'));
 router.patch(
   '/shops/:id/approve',
   validate(adminSchema.approveShop),
-  adminController.approveShop,
+  catchAsync(adminController.approveShop),
 );
 
 router.patch(
   '/shops/:id/ban',
   validate(adminSchema.banShop),
-  adminController.banShop,
+  catchAsync(adminController.banShop),
 );
 
 router.patch(
   '/users/:id/ban',
   validate(adminSchema.banUser),
-  adminController.banUser,
+  catchAsync(adminController.banUser),
 );
 
-router.get('/dashboard', adminController.getStats);
+router.get('/dashboard', catchAsync(adminController.getStats));
 
 router.get(
   '/shops/pending',
   validate(adminSchema.getPendingShops),
-  adminController.getPendingShops,
+  catchAsync(adminController.getPendingShops),
 );
 
-router.get('/users', validate(adminSchema.getUsers), adminController.getUsers);
+router.get(
+  '/users',
+  validate(adminSchema.getUsers),
+  catchAsync(adminController.getUsers),
+);
 
 router.get(
   '/orders',
   validate(adminSchema.getOrders),
-  adminController.getOrders,
+  catchAsync(adminController.getOrders),
 );
 
 export default router;

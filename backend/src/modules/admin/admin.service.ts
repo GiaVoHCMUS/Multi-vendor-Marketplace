@@ -4,10 +4,11 @@ import { PaginationQuery } from './admin.type';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
-import { ShopStatus } from '@prisma/client';
+import { PaymentStatus, ShopStatus, UserRole } from '@prisma/client';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
+import { StatusCodes } from 'http-status-codes';
 
 export const adminService = {
   async approveShop(shopId: string) {
@@ -24,25 +25,28 @@ export const adminService = {
     });
 
     if (!shop) {
-      throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    if (shop.status === 'ACTIVE') {
-      throw new AppError(MESSAGE.ADMIN.SHOP_ALREADY_APPROVED, 400);
+    if (shop.status === ShopStatus.ACTIVE) {
+      throw new AppError(
+        MESSAGE.ADMIN.SHOP_ALREADY_APPROVED,
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const updatedShop = prisma.$transaction(async (tx) => {
       const updated = await tx.shop.update({
         where: { id: shopId },
         data: {
-          status: 'ACTIVE',
+          status: ShopStatus.ACTIVE,
         },
       });
 
       await tx.user.update({
         where: { id: shop.ownerId },
         data: {
-          role: 'SELLER',
+          role: UserRole.SELLER,
         },
       });
 
@@ -72,12 +76,12 @@ export const adminService = {
     });
 
     if (!shop) {
-      throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.ADMIN.SHOP_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
     const updatedShop = prisma.shop.update({
       where: { id: shopId },
       data: {
-        status: 'BANNED',
+        status: ShopStatus.BANNED,
       },
     });
 
@@ -97,7 +101,7 @@ export const adminService = {
     });
 
     if (!user) {
-      throw new AppError(MESSAGE.ADMIN.USER_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.ADMIN.USER_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     return prisma.user.update({
@@ -125,7 +129,7 @@ export const adminService = {
                 totalAmount: true,
               },
               where: {
-                paymentStatus: 'COMPLETED',
+                paymentStatus: PaymentStatus.COMPLETED,
               },
             }),
           ]);
@@ -170,7 +174,7 @@ export const adminService = {
     ]);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', 400);
+      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -219,7 +223,7 @@ export const adminService = {
     ]);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', 400);
+      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -276,7 +280,7 @@ export const adminService = {
     ]);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', 400);
+      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
     }
 
     return {
