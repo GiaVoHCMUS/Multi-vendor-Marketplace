@@ -2,11 +2,11 @@ import { NextFunction, Request, Response } from 'express';
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible';
 import { AppError } from '../utils/AppError';
 import { catchAsync } from '../utils/catchAsync';
+import { StatusCodes } from 'http-status-codes';
 
 export const rateLimitMiddlware = (limiter: RateLimiterRedis) => {
   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const key = req.user ? req.user.id : req.ip;
-    console.log(key);
 
     try {
       await limiter.consume(key as string);
@@ -21,7 +21,7 @@ export const rateLimitMiddlware = (limiter: RateLimiterRedis) => {
 
       throw new AppError(
         'Bạn đang thao tác quá nhanh. Vui lòng thử lại sau.',
-        429,
+        StatusCodes.TOO_MANY_REQUESTS,
         { retryAfter: `Bạn cần chờ ${retryAfter}s rồi thử lại` },
       );
     }

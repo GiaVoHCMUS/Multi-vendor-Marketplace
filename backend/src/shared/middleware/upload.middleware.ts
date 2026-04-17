@@ -1,7 +1,8 @@
 import multer from 'multer';
-import { Request} from 'express';
+import { Request } from 'express';
 import path from 'path';
 import { AppError } from '../utils/AppError';
+import { StatusCodes } from 'http-status-codes';
 
 const storage = multer.memoryStorage();
 const fileFilter = (
@@ -15,7 +16,12 @@ const fileFilter = (
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new AppError('Chỉ chấp nhận file ảnh (jpg, png, gif)!', 400));
+    cb(
+      new AppError(
+        'Chỉ chấp nhận file ảnh (jpg, png, gif)!',
+        StatusCodes.BAD_REQUEST,
+      ),
+    );
   }
 };
 

@@ -3,6 +3,7 @@ import { tokenUtils } from '../utils/jwt';
 import { AppError } from '../utils/AppError';
 import { catchAsync } from '../utils/catchAsync';
 import { UserRole } from '@prisma/client';
+import { StatusCodes } from 'http-status-codes';
 
 // Middleware bảo vệ Route (Yêu cầu người dùng phải login mới được sử dụng)
 export const protect = catchAsync(
@@ -30,7 +31,7 @@ export const protect = catchAsync(
     req.user = {
       id: decoded.sub,
       role: decoded.role,
-    }
+    };
 
     next();
   },
@@ -40,15 +41,18 @@ export const protect = catchAsync(
 export const restrictTo = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(new AppError('Bạn chưa đăng nhập', 401));
+      return next(new AppError('Bạn chưa đăng nhập', StatusCodes.UNAUTHORIZED));
     }
 
     if (!roles.includes(req.user.role)) {
       return next(
-        new AppError('Bạn không có quyền thực hiện hành động này', 403),
+        new AppError(
+          'Bạn không có quyền thực hiện hành động này',
+          StatusCodes.FORBIDDEN,
+        ),
       );
     }
-    
+
     next();
   };
 };
