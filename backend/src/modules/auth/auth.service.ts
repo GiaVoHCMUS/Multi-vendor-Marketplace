@@ -14,6 +14,7 @@ import {
   AUTH_TOKEN_TTL,
 } from '@/shared/constants/auth-token.constants';
 import { SESSION_TTL } from '@/shared/constants/session.constants';
+import { StatusCodes } from 'http-status-codes';
 
 const redis = redisClient.getInstance();
 
@@ -42,7 +43,10 @@ export const authService = {
   register: async (email: string, passwordInput: string, fullName: string) => {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      throw new AppError(MESSAGE.AUTH.EMAIL_ALREADY_EXISTS, 400);
+      throw new AppError(
+        MESSAGE.AUTH.EMAIL_ALREADY_EXISTS,
+        StatusCodes.CONFLICT,
+      );
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
@@ -70,7 +74,7 @@ export const authService = {
   verifyEmail: async (token: string) => {
     const userId = await redis.get(AUTH_TOKEN_KEYS.verifyEmail(token));
     if (!userId) {
-      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, 400);
+      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
     }
 
     await prisma.user.update({
@@ -87,12 +91,12 @@ export const authService = {
       where: { email, deletedAt: null },
     });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, 401);
+      throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, StatusCodes.UNAUTHORIZED);
     }
 
     // Check xác thực email
     if (!user.isVerified) {
-      throw new AppError('Vui lòng xác thực email trước khi đăng nhập', 403);
+      throw new AppError('Vui lòng xác thực email trước khi đăng nhập', StatusCodes.FORBIDDEN);
     }
 
     const tokens = await authService.generateAndStoreTokens(user.id, user.role);
@@ -126,7 +130,7 @@ export const authService = {
       // Nếu tồn tại ownerId nghĩa là tokenId này vừa được dùng để refresh thành công trước đó
       // Token bị dùng lại
       await sessionService.deleteAllSessions(userId);
-      throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, 403);
+      throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, StatusCodes.FORBIDDEN);
     }
 
     // Lấy token đã lưu trong Session Service
@@ -134,14 +138,14 @@ export const authService = {
 
     // Token đã bị xóa hoặc hết hạn
     if (!savedToken) {
-      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, 401);
+      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, StatusCodes.UNAUTHORIZED);
     }
 
     // So sánh tính hợp lệ của token (đề phòng tokenId cũ bị giả mạo)
     if (savedToken !== oldRefreshToken) {
       // Xóa tất cả session đang đăng nhập
       await sessionService.deleteAllSessions(userId);
-      throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, 403);
+      throw new AppError(MESSAGE.AUTH.SECURITY_BREACH, StatusCodes.FORBIDDEN);
     }
 
     // Thực hiện Rotation
@@ -158,7 +162,7 @@ export const authService = {
     });
 
     if (!user) {
-      throw new AppError(MESSAGE.AUTH.NOT_FOUND_EMAIL, 404);
+      throw new AppError(MESSAGE.AUTH.NOT_FOUND_EMAIL, StatusCodes.NOT_FOUND);
     }
 
     const resetToken = uuidv4();
@@ -178,7 +182,7 @@ export const authService = {
     const userId = await redis.get(AUTH_TOKEN_KEYS.resetPassword(token));
 
     if (!userId) {
-      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, 400);
+      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
     }
 
     const hashPassword = await bcrypt.hash(password, 12);
