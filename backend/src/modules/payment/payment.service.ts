@@ -12,8 +12,8 @@ import {
 } from '@prisma/client';
 import { redisClient } from '@/core/cache/redis';
 import { mailJob } from '@/jobs/mail/mail.job';
-import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';
+import { StatusCodes } from 'http-status-codes';
 
 const redis = redisClient.getInstance();
 
@@ -27,10 +27,10 @@ class PaymentService {
       include: { orders: true },
     });
 
-    if (!orderGroup) throw new AppError(MESSAGE.ORDER.NOT_FOUND, 404);
+    if (!orderGroup) throw new AppError(MESSAGE.ORDER.NOT_FOUND, StatusCodes.NOT_FOUND);
 
     if (orderGroup.paymentStatus !== PaymentStatus.PENDING) {
-      throw new AppError(MESSAGE.ORDER.ALREADY_PAID_OR_INVALID, 400);
+      throw new AppError(MESSAGE.ORDER.ALREADY_PAID_OR_INVALID, StatusCodes.BAD_REQUEST);
     }
 
     if (input.provider === PaymentMethod.VNPAY) {
@@ -72,8 +72,6 @@ class PaymentService {
         },
       },
     });
-
-    console.log(orderGroup);
 
     if (!orderGroup) {
       return { RspCode: '01', Message: 'Order not found' };

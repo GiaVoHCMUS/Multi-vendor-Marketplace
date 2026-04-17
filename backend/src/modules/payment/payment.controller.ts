@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import { paymentService } from './payment.service';
-import { catchAsync } from '@/shared/utils/catchAsync';
 import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { StatusCodes } from 'http-status-codes';
 
 export const paymentController = {
   // create payment
-  createPayment: catchAsync(async (req: Request, res: Response) => {
+  createPayment: async (req: Request, res: Response) => {
     const { orderGroupId, provider } = req.body;
 
     let ipAddr =
@@ -22,11 +22,16 @@ export const paymentController = {
       ipAddr,
     });
 
-    successResponse(res, 200, MESSAGE.ORDER.CHECKOUT_SUCCESS, result);
-  }),
+    successResponse(
+      res,
+      StatusCodes.OK,
+      MESSAGE.ORDER.CHECKOUT_SUCCESS,
+      result,
+    );
+  },
 
   // return url (frontend redirect)
-  vnpayReturn: catchAsync(async (req: Request, res: Response) => {
+  vnpayReturn: async (req: Request, res: Response) => {
     const result = await paymentService.handleVNPayReturn(
       req.query as Record<string, string>,
     );
@@ -38,7 +43,7 @@ export const paymentController = {
     }
 
     res.send('Thanh toán thất bại');
-  }),
+  },
 
   // IPN (server to server)
   vnpayIPN: async (req: Request, res: Response) => {
@@ -47,7 +52,7 @@ export const paymentController = {
         req.query as Record<string, string>,
       );
 
-      return res.status(200).json(result);
+      return res.status(StatusCodes.OK).json(result);
     } catch (error) {
       console.error('VNPay IPN Error:', error);
 
