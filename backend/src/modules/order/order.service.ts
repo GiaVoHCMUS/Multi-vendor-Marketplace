@@ -17,6 +17,7 @@ import { mailJob } from '@/jobs/mail/mail.job';
 import { checkAndCompleteOrderGroup } from './order.helper';
 import { paymentService } from '../payment/payment.service';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';
+import { StatusCodes } from 'http-status-codes';
 
 const redis = redisClient.getInstance();
 
@@ -33,7 +34,7 @@ export const orderService = {
     });
 
     if (!user) {
-      throw new AppError(MESSAGE.USER.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.USER.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     const items = await redis.hGetAll(getCartKey(userId));
@@ -46,7 +47,7 @@ export const orderService = {
     );
 
     if (cartItems.length == 0) {
-      throw new AppError('Giỏ hàng rỗng', 400);
+      throw new AppError('Giỏ hàng rỗng', StatusCodes.BAD_REQUEST);
     }
 
     const productIds = cartItems.map((i) => i.productId);
@@ -69,7 +70,7 @@ export const orderService = {
     });
 
     if (products.length !== cartItems.length) {
-      throw new AppError(MESSAGE.ORDER.INVALID_PRODUCTS, 400);
+      throw new AppError(MESSAGE.ORDER.INVALID_PRODUCTS, StatusCodes.BAD_REQUEST);
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -80,7 +81,7 @@ export const orderService = {
       const product = productMap.get(item.productId)!;
 
       if (item.quantity > product.stock) {
-        throw new AppError(MESSAGE.ORDER.INSUFFICIENT_STOCK, 400);
+        throw new AppError(MESSAGE.ORDER.INSUFFICIENT_STOCK, StatusCodes.BAD_REQUEST);
       }
 
       const price = Number(product.price);
@@ -258,7 +259,7 @@ export const orderService = {
     ]);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', 400);
+      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -338,7 +339,7 @@ export const orderService = {
     });
 
     if (!order) {
-      throw new AppError(MESSAGE.ORDER.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.ORDER.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     return order;
@@ -359,12 +360,12 @@ export const orderService = {
     });
 
     if (!order) {
-      throw new AppError(MESSAGE.ORDER.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.ORDER.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     // Kiểm tra quyền seller
     if (order.shop.ownerId !== sellerId) {
-      throw new AppError(MESSAGE.ORDER.FORBIDDEN_UPDATE_STATUS, 403);
+      throw new AppError(MESSAGE.ORDER.FORBIDDEN_UPDATE_STATUS, StatusCodes.FORBIDDEN);
     }
 
     // State machine: PENDING -> CONFIRMED -> SHIPPING -> DELIVERED -> CANCELLED
@@ -379,7 +380,7 @@ export const orderService = {
     if (!allowedTransitions[order.status].includes(nextStatus)) {
       throw new AppError(
         `Thay đổi trạng thái không hợp lệ ${order.status} -> ${nextStatus}`,
-        400,
+        StatusCodes.BAD_REQUEST,
       );
     }
 

@@ -5,28 +5,33 @@ import { validate } from '@/shared/middleware/validate.middleware';
 import { orderSchema } from './order.schema';
 import { transactionLimiter } from '@/core/limiter/limiter.config';
 import { rateLimitMiddlware } from '@/shared/middleware/limiter.middlware';
+import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
 router.use(protect);
-router.get('/', validate(orderSchema.getMyOrder), orderController.getMyOrders);
+router.get(
+  '/',
+  validate(orderSchema.getMyOrder),
+  catchAsync(orderController.getMyOrders),
+);
 router.post(
   '/',
   rateLimitMiddlware(transactionLimiter),
   validate(orderSchema.checkout),
-  orderController.checkout,
+  catchAsync(orderController.checkout),
 );
 router.get(
   '/:id',
   validate(orderSchema.getOrderDetail),
-  orderController.getOrderDetail,
+  catchAsync(orderController.getOrderDetail),
 );
 
 router.use(restrictTo('SELLER'));
 router.patch(
   '/:id',
   validate(orderSchema.updateStatus),
-  orderController.updateOrderStatus,
+  catchAsync(orderController.updateOrderStatus),
 );
 
 export default router;
