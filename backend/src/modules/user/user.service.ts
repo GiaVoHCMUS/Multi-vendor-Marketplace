@@ -9,6 +9,7 @@ import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
+import { StatusCodes } from 'http-status-codes';
 
 export const userService = {
   getMe: async (userId: string) => {
@@ -90,7 +91,7 @@ export const userService = {
     });
 
     if (!address) {
-      throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     if (data.isDefault) {
@@ -118,7 +119,7 @@ export const userService = {
     });
 
     if (!address) {
-      throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));

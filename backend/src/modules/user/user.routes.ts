@@ -4,33 +4,34 @@ import { protect } from '@/shared/middleware/auth.middleware';
 import { userController } from './user.controller';
 import { upload } from '@/shared/middleware/upload.middleware';
 import { userSchema } from './user.schema';
+import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
 router.use(protect);
 
-router.get('/me', userController.getMe);
+router.get('/me', catchAsync(userController.getMe));
 router.patch(
   '/me',
   upload.single('avatars'),
   validate(userSchema.updateMe),
-  userController.updateMe,
+  catchAsync(userController.updateMe),
 );
-router.get('/addresses', userController.getAddresses);
+router.get('/addresses', catchAsync(userController.getAddresses));
 router.post(
   '/addresses',
   validate(userSchema.createAddress),
-  userController.createAddress,
+  catchAsync(userController.createAddress),
 );
 router.patch(
   '/addresses/:id',
   validate(userSchema.updateAddress),
-  userController.updateAddress,
+  catchAsync(userController.updateAddress),
 );
 router.delete(
   '/addresses/:id',
   validate(userSchema.deleteAddress),
-  userController.deleteAddress,
+  catchAsync(userController.deleteAddress),
 );
 
 export default router;
