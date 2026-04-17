@@ -1,7 +1,7 @@
 import { BaseRepository } from '@/shared/repositories/base.repository';
 import { User, Prisma } from '@prisma/client';
 
-class AuthRepository extends BaseRepository<
+class UserRepository extends BaseRepository<
   User,
   Prisma.UserCreateInput,
   Prisma.UserUpdateInput,
@@ -23,4 +23,4 @@ class AuthRepository extends BaseRepository<
   }
 }
 
-export const authRepository = new AuthRepository();
+export const userRepository = new UserRepository();

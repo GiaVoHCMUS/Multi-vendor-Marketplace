@@ -14,7 +14,7 @@ import {
 } from '@/shared/constants/auth-token.constants';
 import { SESSION_TTL } from '@/shared/constants/session.constants';
 import { StatusCodes } from 'http-status-codes';
-import { authRepository } from './auth.repository';
+import { userRepository } from '../user/user.repository';
 
 const redis = redisClient.getInstance();
 
@@ -41,7 +41,7 @@ export const authService = {
   },
 
   register: async (email: string, passwordInput: string, fullName: string) => {
-    const existingUser = await authRepository.findByEmail(email);
+    const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       throw new AppError(
         MESSAGE.AUTH.EMAIL_ALREADY_EXISTS,
@@ -50,7 +50,7 @@ export const authService = {
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
-    const user = await authRepository.create({
+    const user = await userRepository.create({
       email,
       password: hashPassword,
       fullName,
@@ -78,14 +78,14 @@ export const authService = {
       );
     }
 
-    await authRepository.update(userId, { isVerified: true });
+    await userRepository.update(userId, { isVerified: true });
 
     // Xóa token sau khi dùng xong
     await redis.del(AUTH_TOKEN_KEYS.verifyEmail(token));
   },
 
   login: async (email: string, password: string) => {
-    const user = await authRepository.findByEmail(email);
+    const user = await userRepository.findByEmail(email);
     
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError(
@@ -163,7 +163,7 @@ export const authService = {
   },
 
   forgotPassword: async (email: string) => {
-    const user = await authRepository.findByEmail(email);
+    const user = await userRepository.findByEmail(email);
 
     if (!user) {
       throw new AppError(MESSAGE.AUTH.NOT_FOUND_EMAIL, StatusCodes.NOT_FOUND);
@@ -194,7 +194,7 @@ export const authService = {
 
     const hashPassword = await bcrypt.hash(password, 12);
 
-    await authRepository.update(userId, { password: hashPassword });
+    await userRepository.update(userId, { password: hashPassword });
 
     await redis.del(AUTH_TOKEN_KEYS.resetPassword(token));
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
