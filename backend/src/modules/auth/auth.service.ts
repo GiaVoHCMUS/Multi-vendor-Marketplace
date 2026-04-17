@@ -1,4 +1,3 @@
-import { prisma } from '@/core/config/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { TokenPayload } from '@/shared/types/auth';
 import { AppError } from '@/shared/utils/AppError';
@@ -15,6 +14,7 @@ import {
 } from '@/shared/constants/auth-token.constants';
 import { SESSION_TTL } from '@/shared/constants/session.constants';
 import { StatusCodes } from 'http-status-codes';
+import { authRepository } from './auth.repository';
 
 const redis = redisClient.getInstance();
 
@@ -41,7 +41,7 @@ export const authService = {
   },
 
   register: async (email: string, passwordInput: string, fullName: string) => {
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await authRepository.findByEmail(email);
     if (existingUser) {
       throw new AppError(
         MESSAGE.AUTH.EMAIL_ALREADY_EXISTS,
@@ -50,12 +50,10 @@ export const authService = {
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashPassword,
-        fullName,
-      },
+    const user = await authRepository.create({
+      email,
+      password: hashPassword,
+      fullName,
     });
 
     // Tạo token xác thực và lưu vào Redis
@@ -74,29 +72,34 @@ export const authService = {
   verifyEmail: async (token: string) => {
     const userId = await redis.get(AUTH_TOKEN_KEYS.verifyEmail(token));
     if (!userId) {
-      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
+      throw new AppError(
+        MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN,
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { isVerified: true },
-    });
+    await authRepository.update(userId, { isVerified: true });
 
     // Xóa token sau khi dùng xong
     await redis.del(AUTH_TOKEN_KEYS.verifyEmail(token));
   },
 
   login: async (email: string, password: string) => {
-    const user = await prisma.user.findFirst({
-      where: { email, deletedAt: null },
-    });
+    const user = await authRepository.findByEmail(email);
+    
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        MESSAGE.AUTH.INVALID_CREDENTIALS,
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     // Check xác thực email
     if (!user.isVerified) {
-      throw new AppError('Vui lòng xác thực email trước khi đăng nhập', StatusCodes.FORBIDDEN);
+      throw new AppError(
+        'Vui lòng xác thực email trước khi đăng nhập',
+        StatusCodes.FORBIDDEN,
+      );
     }
 
     const tokens = await authService.generateAndStoreTokens(user.id, user.role);
@@ -138,7 +141,10 @@ export const authService = {
 
     // Token đã bị xóa hoặc hết hạn
     if (!savedToken) {
-      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        MESSAGE.AUTH.SESSION_EXPIRED,
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     // So sánh tính hợp lệ của token (đề phòng tokenId cũ bị giả mạo)
@@ -157,9 +163,7 @@ export const authService = {
   },
 
   forgotPassword: async (email: string) => {
-    const user = await prisma.user.findFirst({
-      where: { email, deletedAt: null },
-    });
+    const user = await authRepository.findByEmail(email);
 
     if (!user) {
       throw new AppError(MESSAGE.AUTH.NOT_FOUND_EMAIL, StatusCodes.NOT_FOUND);
@@ -182,17 +186,15 @@ export const authService = {
     const userId = await redis.get(AUTH_TOKEN_KEYS.resetPassword(token));
 
     if (!userId) {
-      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
+      throw new AppError(
+        MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN,
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const hashPassword = await bcrypt.hash(password, 12);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        password: hashPassword,
-      },
-    });
+    await authRepository.update(userId, { password: hashPassword });
 
     await redis.del(AUTH_TOKEN_KEYS.resetPassword(token));
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
