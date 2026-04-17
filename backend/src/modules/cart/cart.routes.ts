@@ -3,22 +3,31 @@ import { Router } from 'express';
 import { cartController } from './cart.controller';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { cartSchema } from './cart.schema';
+import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
 router.use(protect);
-router.get('/', cartController.getCart);
-router.post('/', validate(cartSchema.addToCart), cartController.addToCart);
+router.get('/', catchAsync(cartController.getCart));
+router.post(
+  '/',
+  validate(cartSchema.addToCart),
+  catchAsync(cartController.addToCart),
+);
 router.patch(
   '/:productId',
   validate(cartSchema.updateItem),
-  cartController.updateItem,
+  catchAsync(cartController.updateItem),
 );
 router.delete(
   '/:productId',
   validate(cartSchema.removeItem),
-  cartController.removeFromCart,
+  catchAsync(cartController.removeFromCart),
 );
-router.delete('/', validate(cartSchema.clearCart), cartController.clearCart);
+router.delete(
+  '/',
+  validate(cartSchema.clearCart),
+  catchAsync(cartController.clearCart),
+);
 
 export default router;

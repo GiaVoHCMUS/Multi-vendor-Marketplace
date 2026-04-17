@@ -1,27 +1,27 @@
-import { catchAsync } from '@/shared/utils/catchAsync';
 import { Request, Response } from 'express';
 import { cartService } from './cart.service';
 import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { StatusCodes } from 'http-status-codes';
 
 export const cartController = {
-  getCart: catchAsync(async (req: Request, res: Response) => {
+  getCart: async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
     const cart = await cartService.getCart(userId);
 
-    successResponse(res, 200, MESSAGE.CART.GET_DETAIL_SUCCESS, cart);
-  }),
+    successResponse(res, StatusCodes.OK, MESSAGE.CART.GET_DETAIL_SUCCESS, cart);
+  },
 
-  addToCart: catchAsync(async (req: Request, res: Response) => {
+  addToCart: async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
     await cartService.addToCart(userId, req.body);
 
-    successResponse(res, 200, MESSAGE.CART.ADD_PRODUCT_SUCCESS);
-  }),
+    successResponse(res, StatusCodes.OK, MESSAGE.CART.ADD_PRODUCT_SUCCESS);
+  },
 
-  updateItem: catchAsync(async (req: Request, res: Response) => {
+  updateItem: async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
     await cartService.updateItem(
@@ -30,25 +30,22 @@ export const cartController = {
       req.body.quantity,
     );
 
-    successResponse(res, 200, MESSAGE.CART.UPDATE_SUCCESS);
-  }),
+    successResponse(res, StatusCodes.OK, MESSAGE.CART.UPDATE_SUCCESS);
+  },
 
-  removeFromCart: catchAsync(async (req: Request, res: Response) => {
+  removeFromCart: async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    await cartService.removeFromCart(
-      userId,
-      req.params.productId as string,
-    );
+    await cartService.removeFromCart(userId, req.params.productId as string);
 
-    successResponse(res, 200, MESSAGE.CART.REMOVE_PRODUCT_SUCCESS);
-  }),
+    successResponse(res, StatusCodes.OK, MESSAGE.CART.REMOVE_PRODUCT_SUCCESS);
+  },
 
-  clearCart: catchAsync(async (req: Request, res: Response) => {
+  clearCart: async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
     await cartService.clearCart(userId);
 
-    successResponse(res, 200, MESSAGE.CART.CLEAR_SUCCESS);
-  }),
+    successResponse(res, StatusCodes.OK, MESSAGE.CART.CLEAR_SUCCESS);
+  },
 };

@@ -4,6 +4,7 @@ import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { ProductStatus } from '@prisma/client';
+import { StatusCodes } from 'http-status-codes';
 
 const redis = redisClient.getInstance();
 const CART_TTL = 7 * 24 * 60 * 60;
@@ -87,7 +88,7 @@ export const cartService = {
     });
 
     if (!product) {
-      throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     const cartKey = getCartKey(userId);
@@ -96,7 +97,10 @@ export const cartService = {
     const newQty = Number(currentQty ?? 0) + item.quantity;
 
     if (newQty > product.stock) {
-      throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, 400);
+      throw new AppError(
+        MESSAGE.CART.QUANTITY_EXCEEDS_STOCK,
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     await redis.hIncrBy(cartKey, item.productId, item.quantity);
@@ -110,7 +114,7 @@ export const cartService = {
     const exists = await redis.hExists(cartKey, productId);
 
     if (!exists) {
-      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, 404);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, StatusCodes.NOT_FOUND);
     }
 
     const product = await prisma.product.findFirst({
@@ -122,11 +126,11 @@ export const cartService = {
     });
 
     if (!product) {
-      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, 404);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, StatusCodes.NOT_FOUND);
     }
 
     if (quantity > product.stock) {
-      throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, 400);
+      throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, StatusCodes.BAD_REQUEST);
     }
 
     await redis.hSet(cartKey, productId, quantity);
