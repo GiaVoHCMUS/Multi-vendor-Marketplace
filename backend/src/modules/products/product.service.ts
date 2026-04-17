@@ -8,11 +8,12 @@ import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
 import { MESSAGE } from '@/shared/constants/message.constants';
-import { ProductStatus } from '@prisma/client';
+import { ProductStatus, ShopStatus } from '@prisma/client';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { cursorUtil } from '@/shared/utils/cursor';
+import { StatusCodes } from 'http-status-codes';
 
 export const productService = {
   async invalidateProductList() {
@@ -269,7 +270,7 @@ export const productService = {
         });
 
         if (!product) {
-          throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, 404);
+          throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
         }
 
         return product;
@@ -291,11 +292,11 @@ export const productService = {
     });
 
     if (!shop) {
-      throw new AppError(MESSAGE.SHOP.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.SHOP.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    if (shop.status !== 'ACTIVE') {
-      throw new AppError(MESSAGE.SHOP.NOT_ACTIVE, 403);
+    if (shop.status !== ShopStatus.ACTIVE) {
+      throw new AppError(MESSAGE.SHOP.NOT_ACTIVE, StatusCodes.FORBIDDEN);
     }
 
     const category = await prisma.category.findUnique({
@@ -305,7 +306,7 @@ export const productService = {
     });
 
     if (!category) {
-      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     const newSlug = slug.generate(data.name);
@@ -346,7 +347,7 @@ export const productService = {
     });
 
     if (!product) {
-      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     const updatedProduct = await prisma.product.update({
@@ -395,7 +396,7 @@ export const productService = {
     });
 
     if (!product) {
-      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     await prisma.product.delete({

@@ -10,6 +10,7 @@ import {
   managementLimiter,
   publicLimiter,
 } from '@/core/limiter/limiter.config';
+import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
@@ -17,12 +18,12 @@ router.get(
   '/',
   rateLimitMiddlware(publicLimiter),
   validate(productSchema.productQuery),
-  productController.getAll,
+  catchAsync(productController.getAll),
 );
 router.get(
   '/:slug',
   rateLimitMiddlware(publicLimiter),
-  productController.getBySlug,
+  catchAsync(productController.getBySlug),
 );
 
 router.use(protect);
@@ -34,14 +35,18 @@ router.post(
   upload.array('product_images', 5),
   validateProductImages,
   validate(productSchema.create),
-  productController.create,
+  catchAsync(productController.create),
 );
 router.patch(
   '/:id',
   upload.array('product_images', 5),
   validate(productSchema.update),
-  productController.update,
+  catchAsync(productController.update),
 );
-router.delete('/:id', validate(productSchema.delete), productController.delete);
+router.delete(
+  '/:id',
+  validate(productSchema.delete),
+  catchAsync(productController.delete),
+);
 
 export default router;
