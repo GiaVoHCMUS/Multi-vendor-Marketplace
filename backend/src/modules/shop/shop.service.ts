@@ -9,6 +9,7 @@ import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { cacheService } from '@/core/cache/cache.service';
+import { StatusCodes } from 'http-status-codes';
 
 export const shopService = {
   async getShopByOwner(ownerId: string) {
@@ -20,7 +21,7 @@ export const shopService = {
     });
 
     if (!shop) {
-      throw new AppError(MESSAGE.SHOP.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.SHOP.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     return shop;
@@ -35,7 +36,10 @@ export const shopService = {
     });
 
     if (existingShop) {
-      throw new AppError(MESSAGE.SHOP.ALREADY_REGISTERED, 400);
+      throw new AppError(
+        MESSAGE.SHOP.ALREADY_REGISTERED,
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const shop = await prisma.shop.create({
@@ -130,7 +134,7 @@ export const shopService = {
     ]);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', 400);
+      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -158,11 +162,14 @@ export const shopService = {
     });
 
     if (!order) {
-      throw new AppError(MESSAGE.SHOP.ORDER_NOT_FOUND, 404);
+      throw new AppError(MESSAGE.SHOP.ORDER_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     if (order.status === OrderStatus.DELIVERED) {
-      throw new AppError(MESSAGE.SHOP.ORDER_ALREADY_DELIVERED, 400);
+      throw new AppError(
+        MESSAGE.SHOP.ORDER_ALREADY_DELIVERED,
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const updatedOrder = await prisma.order.update({

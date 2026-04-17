@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { shopController } from './shop.controller';
 import { shopSchema } from './shop.schema';
 import { validate } from '@/shared/middleware/validate.middleware';
+import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
@@ -12,27 +13,27 @@ router.post(
   '/register',
   upload.single('logo'),
   validate(shopSchema.register),
-  shopController.register,
+  catchAsync(shopController.register),
 );
 
 router.use(restrictTo('SELLER'));
-router.get('/me', shopController.getMyShop);
+router.get('/me', catchAsync(shopController.getMyShop));
 router.patch(
   '/me',
   upload.single('logo'),
   validate(shopSchema.updateMyShop),
-  shopController.updateMyShop,
+  catchAsync(shopController.updateMyShop),
 );
 router.get(
   '/orders',
   validate(shopSchema.getShopOrders),
-  shopController.getShopOrders,
+  catchAsync(shopController.getShopOrders),
 );
 router.patch(
   '/orders/:id/status',
   validate(shopSchema.updateOrderStatus),
-  shopController.updateOrderStatus,
+  catchAsync(shopController.updateOrderStatus),
 );
-router.get('/analytics', shopController.getShopAnalytics);
+router.get('/analytics', catchAsync(shopController.getShopAnalytics));
 
 export default router;

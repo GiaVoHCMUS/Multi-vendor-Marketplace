@@ -1,13 +1,13 @@
-import { catchAsync } from '@/shared/utils/catchAsync';
 import { Request, Response } from 'express';
 import { shopService } from './shop.service';
 import { successResponse } from '@/shared/utils/response';
 import { imageService } from '@/shared/services/image.service';
 import { ImageType } from '@/shared/types/image.type';
 import { MESSAGE } from '@/shared/constants/message.constants';
+import { StatusCodes } from 'http-status-codes';
 
 export const shopController = {
-  register: catchAsync(async (req: Request, res: Response) => {
+  register: async (req: Request, res: Response) => {
     let logoUrl: ImageType | undefined;
     if (req.file) {
       const image = await imageService.uploadSingle(req.file.buffer, 'logo');
@@ -16,16 +16,26 @@ export const shopController = {
 
     const shop = await shopService.register(req.user!.id, req.body, logoUrl);
 
-    successResponse(res, 201, MESSAGE.SHOP.REGISTER_SUCCESS, shop);
-  }),
+    successResponse(
+      res,
+      StatusCodes.CREATED,
+      MESSAGE.SHOP.REGISTER_SUCCESS,
+      shop,
+    );
+  },
 
-  getMyShop: catchAsync(async (req: Request, res: Response) => {
+  getMyShop: async (req: Request, res: Response) => {
     const shop = await shopService.getMyShop(req.user!.id);
 
-    successResponse(res, 200, MESSAGE.SHOP.GET_MY_SHOP_SUCCESS, shop);
-  }),
+    successResponse(
+      res,
+      StatusCodes.OK,
+      MESSAGE.SHOP.GET_MY_SHOP_SUCCESS,
+      shop,
+    );
+  },
 
-  updateMyShop: catchAsync(async (req: Request, res: Response) => {
+  updateMyShop: async (req: Request, res: Response) => {
     let logoUrl: ImageType | undefined;
     if (req.file) {
       const image = await imageService.uploadSingle(req.file.buffer, 'logo');
@@ -37,31 +47,52 @@ export const shopController = {
       logoUrl,
     );
 
-    successResponse(res, 200, MESSAGE.SHOP.UPDATE_MY_SHOP_SUCCESS, shop);
-  }),
+    successResponse(
+      res,
+      StatusCodes.OK,
+      MESSAGE.SHOP.UPDATE_MY_SHOP_SUCCESS,
+      shop,
+    );
+  },
 
-  getShopOrders: catchAsync(async (req: Request, res: Response) => {
+  getShopOrders: async (req: Request, res: Response) => {
     const { data, meta } = await shopService.getShopOrders(
       req.user!.id,
       req.query,
     );
 
-    successResponse(res, 200, MESSAGE.SHOP.GET_ORDERS_SUCCESS, data, meta);
-  }),
+    successResponse(
+      res,
+      StatusCodes.OK,
+      MESSAGE.SHOP.GET_ORDERS_SUCCESS,
+      data,
+      meta,
+    );
+  },
 
-  updateOrderStatus: catchAsync(async (req: Request, res: Response) => {
+  updateOrderStatus: async (req: Request, res: Response) => {
     const order = await shopService.updateOrderStatus(
       req.user!.id,
       req.params.id as string,
       req.body.status,
     );
 
-    successResponse(res, 200, MESSAGE.SHOP.UPDATE_ORDER_STATUS_SUCCESS, order);
-  }),
+    successResponse(
+      res,
+      StatusCodes.OK,
+      MESSAGE.SHOP.UPDATE_ORDER_STATUS_SUCCESS,
+      order,
+    );
+  },
 
-  getShopAnalytics: catchAsync(async (req: Request, res: Response) => {
+  getShopAnalytics: async (req: Request, res: Response) => {
     const data = await shopService.getShopAnalytics(req.user!.id);
 
-    successResponse(res, 200, MESSAGE.SHOP.GET_ANALYTICS_SUCCESS, data);
-  }),
+    successResponse(
+      res,
+      StatusCodes.OK,
+      MESSAGE.SHOP.GET_ANALYTICS_SUCCESS,
+      data,
+    );
+  },
 };
