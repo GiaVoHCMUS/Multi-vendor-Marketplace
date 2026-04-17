@@ -6,6 +6,7 @@ import { ImageType } from '@/shared/types/image.type';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
+import { StatusCodes } from 'http-status-codes';
 
 export const categoryService = {
   async invalidateCategoryList() {
@@ -55,7 +56,7 @@ export const categoryService = {
           },
         });
         if (!category) {
-          throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
+          throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
         }
 
         return category;
@@ -88,7 +89,7 @@ export const categoryService = {
     });
 
     if (!category) {
-      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     const updatedCategory = await prisma.category.update({
@@ -113,7 +114,7 @@ export const categoryService = {
     });
 
     if (!category) {
-      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, 404);
+      throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     await prisma.category.delete({
