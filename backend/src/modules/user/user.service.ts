@@ -1,4 +1,3 @@
-import { prisma } from '@/core/config/prisma';
 import {
   CreateAddressInput,
   UpdateAddressInput,
