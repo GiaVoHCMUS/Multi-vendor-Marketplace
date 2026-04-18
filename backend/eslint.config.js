@@ -18,7 +18,7 @@ export default defineConfig(
   },
   {
     // Chỉ định các file cần kiểm tra
-    files: ['src/**/*.ts'],
+    files: ['**/*.ts'],
     // Bỏ qua các thư mục không cần thiết
     ignores: ['node_modules/', 'dist/'],
   },
