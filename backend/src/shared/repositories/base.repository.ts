@@ -39,8 +39,8 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, Args, W> {
     });
   }
 
-  async findAll(args?: Args): Promise<T[]> {
-    return await this.modelDelegate.findMany(args);
+  async findAll(where: W, args?: Args): Promise<T[]> {
+    return await this.modelDelegate.findMany({ where, ...args });
   }
 
   async create(data: CreateInput, args?: Args): Promise<T> {

@@ -10,33 +10,22 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { cacheService } from '@/core/cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { StatusCodes } from 'http-status-codes';
+import { userRepository } from './user.repository';
+import { addressRepository } from './address.repository';
 
 export const userService = {
   getMe: async (userId: string) => {
     // Lấy thông tin cá nhân
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      omit: {
-        createdAt: true,
-        deletedAt: true,
-        updatedAt: true,
-        password: true,
-      },
-    });
-    return user;
+    return userRepository.getProfileById(userId);
   },
 
   updateMe: async (userId: string, data: UpdateMeInput, file?: ImageType) => {
     // Cập nhật thông tin
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...data,
-        avatarUrl: file?.url,
-        avatarPublicId: file?.publicId,
-      },
+    return userRepository.updateUser(userId, {
+      ...data,
+      avatarUrl: file?.url,
+      avatarPublicId: file?.publicId,
     });
-    return user;
   },
 
   getAddresses: async (userId: string) => {
@@ -45,12 +34,7 @@ export const userService = {
     return cacheService.getOrSet(
       cacheKey,
       async () => {
-        return prisma.address.findMany({
-          where: { userId },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        });
+        return addressRepository.getUserAddress(userId);
       },
       CACHE_TTL.MEDIUM,
     );
@@ -59,18 +43,10 @@ export const userService = {
   createAddress: async (userId: string, data: CreateAddressInput) => {
     // Tạo địa chỉ mới
     if (data.isDefault) {
-      await prisma.address.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      });
+      await addressRepository.clearDefaultStatus(userId);
     }
 
-    const address = await prisma.address.create({
-      data: {
-        userId,
-        ...data,
-      },
-    });
+    const address = await addressRepository.createAddress(userId, data);
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
@@ -83,40 +59,30 @@ export const userService = {
     data: UpdateAddressInput,
   ) => {
     // Cập nhật địa chỉ
-    const address = await prisma.address.findFirst({
-      where: {
-        id: addressId,
-        userId,
-      },
-    });
+    const address = await addressRepository.findAddressByUserId(
+      addressId,
+      userId,
+    );
 
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     if (data.isDefault) {
-      await prisma.address.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      });
+      await addressRepository.clearDefaultStatus(userId);
     }
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
-    return prisma.address.update({
-      where: { id: addressId },
-      data,
-    });
+    return addressRepository.updateAddressById(addressId, data);
   },
 
   deleteAddress: async (userId: string, addressId: string) => {
     // Xóa địa chỉ
-    const address = await prisma.address.findFirst({
-      where: {
-        id: addressId,
-        userId,
-      },
-    });
+    const address = await addressRepository.findAddressByUserId(
+      addressId,
+      userId,
+    );
 
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -124,8 +90,6 @@ export const userService = {
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
-    return prisma.address.delete({
-      where: { id: addressId },
-    });
+    return addressRepository.deleteAddress(addressId);
   },
 };
