@@ -2,12 +2,16 @@
   "name": "marketplace-backend",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --watch src/docs -r tsconfig-paths/register src/server.ts",
-    "build": "prisma generate && tsc && tsc-alias",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src",
     "worker:dev": "ts-node-dev -r tsconfig-paths/register src/jobs/workers/index.ts",
-    "worker": "node dist/jobs/workers/index.js"
+    "worker": "node dist/jobs/workers/index.js",
+    "test": "jest --no-cache",
+    "test:watch": "jest --watchAll --no-cache",
+    "test:ci": "jest --ci --coverage --no-cache",
+    "tree": "npx tree -l 4 -I --ignore 'node_modules' --ignore 'coverage'"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
