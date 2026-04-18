@@ -50,7 +50,7 @@ export const authService = {
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
-    const user = await userRepository.create({
+    const user = await userRepository.createUser({
       email,
       password: hashPassword,
       fullName,
@@ -78,7 +78,7 @@ export const authService = {
       );
     }
 
-    await userRepository.update(userId, { isVerified: true });
+    await userRepository.markEmailAsVerified(userId);
 
     // Xóa token sau khi dùng xong
     await redis.del(AUTH_TOKEN_KEYS.verifyEmail(token));
@@ -86,7 +86,7 @@ export const authService = {
 
   login: async (email: string, password: string) => {
     const user = await userRepository.findByEmail(email);
-    
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError(
         MESSAGE.AUTH.INVALID_CREDENTIALS,
@@ -194,7 +194,7 @@ export const authService = {
 
     const hashPassword = await bcrypt.hash(password, 12);
 
-    await userRepository.update(userId, { password: hashPassword });
+    await userRepository.updatePassword(userId, hashPassword);
 
     await redis.del(AUTH_TOKEN_KEYS.resetPassword(token));
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
