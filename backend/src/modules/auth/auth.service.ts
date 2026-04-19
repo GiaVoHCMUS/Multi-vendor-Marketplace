@@ -4,14 +4,11 @@ import { AppError } from '@/shared/utils/AppError';
 import { tokenUtils } from '@/shared/utils/jwt';
 import bcrypt from 'bcrypt';
 import { UserRole } from '@prisma/client';
-import { sessionService } from '@/core/cache/session.service';
+import { sessionService } from '@/modules/auth/services/session.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
-import { redisClient } from '@/core/cache/redis';
-import {
-  AUTH_TOKEN_KEYS,
-  AUTH_TOKEN_TTL,
-} from '@/shared/constants/auth-token.constants';
+import { redisClient } from '@/core/redis/redis.client';
+import { AUTH_TOKEN_KEYS, AUTH_TOKEN_TTL } from '@/shared/constants/auth-token.constants';
 import { SESSION_TTL } from '@/shared/constants/session.constants';
 import { StatusCodes } from 'http-status-codes';
 import { userRepository } from '../user/user.repository';
@@ -21,10 +18,7 @@ const redis = redisClient.getInstance();
 // src/modules/auth/auth.service.ts
 export const authService = {
   // Tạo cặp token và lưu session vào Redis (Hỗ trợ Multi-device)
-  generateAndStoreTokens: async (
-    userId: string,
-    role: UserRole,
-  ): Promise<TokenPayload> => {
+  generateAndStoreTokens: async (userId: string, role: UserRole): Promise<TokenPayload> => {
     const tokenId = uuidv4(); // Unique id cho mỗi session (device)
     const accessToken = tokenUtils.generateAccessToken(userId, role);
     const refreshToken = tokenUtils.generateRefreshToken(userId, role, tokenId);
@@ -43,10 +37,7 @@ export const authService = {
   register: async (email: string, passwordInput: string, fullName: string) => {
     const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
-      throw new AppError(
-        MESSAGE.AUTH.EMAIL_ALREADY_EXISTS,
-        StatusCodes.CONFLICT,
-      );
+      throw new AppError(MESSAGE.AUTH.EMAIL_ALREADY_EXISTS, StatusCodes.CONFLICT);
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
@@ -72,10 +63,7 @@ export const authService = {
   verifyEmail: async (token: string) => {
     const userId = await redis.get(AUTH_TOKEN_KEYS.verifyEmail(token));
     if (!userId) {
-      throw new AppError(
-        MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN,
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
     }
 
     await userRepository.markEmailAsVerified(userId);
@@ -88,18 +76,12 @@ export const authService = {
     const user = await userRepository.findByEmail(email);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new AppError(
-        MESSAGE.AUTH.INVALID_CREDENTIALS,
-        StatusCodes.UNAUTHORIZED,
-      );
+      throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, StatusCodes.UNAUTHORIZED);
     }
 
     // Check xác thực email
     if (!user.isVerified) {
-      throw new AppError(
-        'Vui lòng xác thực email trước khi đăng nhập',
-        StatusCodes.FORBIDDEN,
-      );
+      throw new AppError('Vui lòng xác thực email trước khi đăng nhập', StatusCodes.FORBIDDEN);
     }
 
     const tokens = await authService.generateAndStoreTokens(user.id, user.role);
@@ -141,10 +123,7 @@ export const authService = {
 
     // Token đã bị xóa hoặc hết hạn
     if (!savedToken) {
-      throw new AppError(
-        MESSAGE.AUTH.SESSION_EXPIRED,
-        StatusCodes.UNAUTHORIZED,
-      );
+      throw new AppError(MESSAGE.AUTH.SESSION_EXPIRED, StatusCodes.UNAUTHORIZED);
     }
 
     // So sánh tính hợp lệ của token (đề phòng tokenId cũ bị giả mạo)
@@ -186,10 +165,7 @@ export const authService = {
     const userId = await redis.get(AUTH_TOKEN_KEYS.resetPassword(token));
 
     if (!userId) {
-      throw new AppError(
-        MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN,
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
     }
 
     const hashPassword = await bcrypt.hash(password, 12);

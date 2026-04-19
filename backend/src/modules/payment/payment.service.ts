@@ -10,7 +10,7 @@ import {
   PayoutStatus,
   TransactionType,
 } from '@prisma/client';
-import { redisClient } from '@/core/cache/redis';
+import { redisClient } from '@/core/redis/redis.client';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';
 import { StatusCodes } from 'http-status-codes';

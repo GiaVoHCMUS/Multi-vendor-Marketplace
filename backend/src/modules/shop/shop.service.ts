@@ -8,7 +8,7 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
-import { cacheService } from '@/core/cache/cache.service';
+import { cacheService } from '@/shared/services/cache.service';
 import { StatusCodes } from 'http-status-codes';
 
 export const shopService = {
@@ -36,10 +36,7 @@ export const shopService = {
     });
 
     if (existingShop) {
-      throw new AppError(
-        MESSAGE.SHOP.ALREADY_REGISTERED,
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new AppError(MESSAGE.SHOP.ALREADY_REGISTERED, StatusCodes.BAD_REQUEST);
     }
 
     const shop = await prisma.shop.create({
@@ -63,11 +60,7 @@ export const shopService = {
     return shop;
   },
 
-  async updateMyShop(
-    ownerId: string,
-    data: UpdateMyShopInput,
-    logoUrl?: ImageType,
-  ) {
+  async updateMyShop(ownerId: string, data: UpdateMyShopInput, logoUrl?: ImageType) {
     const shop = await shopService.getShopByOwner(ownerId);
 
     const updatedShop = await prisma.shop.update({
@@ -147,11 +140,7 @@ export const shopService = {
     };
   },
 
-  async updateOrderStatus(
-    ownerId: string,
-    orderId: string,
-    status: OrderStatus,
-  ) {
+  async updateOrderStatus(ownerId: string, orderId: string, status: OrderStatus) {
     const shop = await shopService.getShopByOwner(ownerId);
 
     const order = await prisma.order.findFirst({
@@ -166,10 +155,7 @@ export const shopService = {
     }
 
     if (order.status === OrderStatus.DELIVERED) {
-      throw new AppError(
-        MESSAGE.SHOP.ORDER_ALREADY_DELIVERED,
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new AppError(MESSAGE.SHOP.ORDER_ALREADY_DELIVERED, StatusCodes.BAD_REQUEST);
     }
 
     const updatedOrder = await prisma.order.update({

@@ -1,20 +1,12 @@
-import { redisClient } from '@/core/cache/redis';
-import {
-  SESSION_KEYS,
-  SESSION_TTL,
-} from '@/shared/constants/session.constants';
+import { redisClient } from '@/core/redis/redis.client';
+import { SESSION_KEYS, SESSION_TTL } from '@/shared/constants/session.constants';
 
 const redis = redisClient.getInstance();
 
 export const sessionService = {
   // Tạo session cho một phiên đăng nhập
   // Và thêm phiên đăng nhập đó vào trong set các phiên đăng nhập của userId hiện tại
-  async createSession(
-    userId: string,
-    tokenId: string,
-    refreshToken: string,
-    ttl: number,
-  ) {
+  async createSession(userId: string, tokenId: string, refreshToken: string, ttl: number) {
     const sessionKey = SESSION_KEYS.session(userId, tokenId);
     // userSessionKey lưu những thiết bị đang đăng nhập vào tài khoản này
     // Sau này dễ mở rộng thêm information devices
@@ -26,10 +18,7 @@ export const sessionService = {
 
     await redis.sAdd(userSessionsKey, tokenId);
 
-    await redis.expire(
-      userSessionsKey,
-      ttl + SESSION_TTL.USER_SESSIONS_TTL_BUFFER,
-    );
+    await redis.expire(userSessionsKey, ttl + SESSION_TTL.USER_SESSIONS_TTL_BUFFER);
   },
 
   // Lấy ra một session của userId trong Redis.

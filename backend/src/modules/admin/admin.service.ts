@@ -5,7 +5,7 @@ import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { PaymentStatus, ShopStatus, UserRole } from '@prisma/client';
-import { cacheService } from '@/core/cache/cache.service';
+import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { StatusCodes } from 'http-status-codes';
@@ -29,10 +29,7 @@ export const adminService = {
     }
 
     if (shop.status === ShopStatus.ACTIVE) {
-      throw new AppError(
-        MESSAGE.ADMIN.SHOP_ALREADY_APPROVED,
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new AppError(MESSAGE.ADMIN.SHOP_ALREADY_APPROVED, StatusCodes.BAD_REQUEST);
     }
 
     const updatedShop = prisma.$transaction(async (tx) => {
@@ -116,23 +113,22 @@ export const adminService = {
     return cacheService.getOrSet(
       CACHE_KEYS.ADMIN.DASHBOARD,
       async () => {
-        const [totalUsers, totalShops, totalOrders, totalRevenue] =
-          await Promise.all([
-            prisma.user.count({ where: { deletedAt: null } }),
+        const [totalUsers, totalShops, totalOrders, totalRevenue] = await Promise.all([
+          prisma.user.count({ where: { deletedAt: null } }),
 
-            prisma.shop.count({ where: { deletedAt: null } }),
+          prisma.shop.count({ where: { deletedAt: null } }),
 
-            prisma.order.count(),
+          prisma.order.count(),
 
-            prisma.orderGroup.aggregate({
-              _sum: {
-                totalAmount: true,
-              },
-              where: {
-                paymentStatus: PaymentStatus.COMPLETED,
-              },
-            }),
-          ]);
+          prisma.orderGroup.aggregate({
+            _sum: {
+              totalAmount: true,
+            },
+            where: {
+              paymentStatus: PaymentStatus.COMPLETED,
+            },
+          }),
+        ]);
 
         return {
           totalUsers,

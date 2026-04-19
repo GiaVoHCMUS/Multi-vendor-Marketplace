@@ -1,15 +1,11 @@
 import { ImageType } from '@/shared/types/image.type';
-import {
-  CreateProductInput,
-  ProductQueryInput,
-  UpdateProductInput,
-} from './product.type';
+import { CreateProductInput, ProductQueryInput, UpdateProductInput } from './product.type';
 import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { ProductStatus, ShopStatus } from '@prisma/client';
-import { cacheService } from '@/core/cache/cache.service';
+import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { cursorUtil } from '@/shared/utils/cursor';
@@ -22,16 +18,7 @@ export const productService = {
   },
 
   async getAll(queryInput: ProductQueryInput) {
-    const {
-      limit,
-      cursor,
-      categorySlug,
-      shopSlug,
-      search,
-      minPrice,
-      maxPrice,
-      sort,
-    } = queryInput;
+    const { limit, cursor, categorySlug, shopSlug, search, minPrice, maxPrice, sort } = queryInput;
 
     const [category, shop] = await Promise.all([
       categorySlug
@@ -71,9 +58,7 @@ export const productService = {
     }
 
     // Lấy Versioning cho List Product
-    const version = await cacheService.getTracker(
-      CACHE_KEYS.PRODUCT.TRACKER_LIST,
-    );
+    const version = await cacheService.getTracker(CACHE_KEYS.PRODUCT.TRACKER_LIST);
 
     // Hàm Helper để sort object keys
     const sortObject = (obj: any) =>

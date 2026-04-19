@@ -1,12 +1,8 @@
-import {
-  CreateAddressInput,
-  UpdateAddressInput,
-  UpdateMeInput,
-} from './user.type';
+import { CreateAddressInput, UpdateAddressInput, UpdateMeInput } from './user.type';
 import { ImageType } from '@/shared/types/image.type';
 import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
-import { cacheService } from '@/core/cache/cache.service';
+import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { StatusCodes } from 'http-status-codes';
 import { userRepository } from './user.repository';
@@ -52,16 +48,9 @@ export const userService = {
     return address;
   },
 
-  updateAddress: async (
-    userId: string,
-    addressId: string,
-    data: UpdateAddressInput,
-  ) => {
+  updateAddress: async (userId: string, addressId: string, data: UpdateAddressInput) => {
     // Cập nhật địa chỉ
-    const address = await addressRepository.findAddressByUserId(
-      addressId,
-      userId,
-    );
+    const address = await addressRepository.findAddressByUserId(addressId, userId);
 
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -78,10 +67,7 @@ export const userService = {
 
   deleteAddress: async (userId: string, addressId: string) => {
     // Xóa địa chỉ
-    const address = await addressRepository.findAddressByUserId(
-      addressId,
-      userId,
-    );
+    const address = await addressRepository.findAddressByUserId(addressId, userId);
 
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);

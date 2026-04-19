@@ -4,7 +4,7 @@ import { slug } from '@/shared/utils/slug';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.type';
 import { ImageType } from '@/shared/types/image.type';
 import { MESSAGE } from '@/shared/constants/message.constants';
-import { cacheService } from '@/core/cache/cache.service';
+import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { StatusCodes } from 'http-status-codes';
 
@@ -14,9 +14,7 @@ export const categoryService = {
   },
 
   async getAll() {
-    const version = await cacheService.getTracker(
-      CACHE_KEYS.CATEGORY.TRACKER_LIST,
-    );
+    const version = await cacheService.getTracker(CACHE_KEYS.CATEGORY.TRACKER_LIST);
 
     const cacheKey = CACHE_KEYS.CATEGORY.LIST(version);
 

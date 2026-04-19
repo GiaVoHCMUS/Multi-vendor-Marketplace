@@ -1,4 +1,4 @@
-import { redisClient } from '@/core/cache/redis';
+import { redisClient } from '@/core/redis/redis.client';
 import { AddToCartInput } from './cart.type';
 import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
@@ -14,12 +14,10 @@ export const cartService = {
   async getCart(userId: string) {
     const items = await redis.hGetAll(getCartKey(userId));
 
-    const cartItems = Object.entries(items ?? {}).map(
-      ([productId, quantity]) => ({
-        productId,
-        quantity: Number(quantity),
-      }),
-    );
+    const cartItems = Object.entries(items ?? {}).map(([productId, quantity]) => ({
+      productId,
+      quantity: Number(quantity),
+    }));
 
     if (cartItems.length === 0) {
       return { cartItems: [], totalItems: 0 };
@@ -70,10 +68,7 @@ export const cartService = {
       })
       .filter((item) => item !== null);
 
-    const totalItems = populatedItems.reduce(
-      (acc, item) => acc + item.quantity,
-      0,
-    );
+    const totalItems = populatedItems.reduce((acc, item) => acc + item.quantity, 0);
 
     return { items: populatedItems, totalItems };
   },
@@ -97,10 +92,7 @@ export const cartService = {
     const newQty = Number(currentQty ?? 0) + item.quantity;
 
     if (newQty > product.stock) {
-      throw new AppError(
-        MESSAGE.CART.QUANTITY_EXCEEDS_STOCK,
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, StatusCodes.BAD_REQUEST);
     }
 
     await redis.hIncrBy(cartKey, item.productId, item.quantity);

@@ -2,7 +2,7 @@ import { userService } from '@/modules/user/user.service';
 import { userRepository } from '@/modules/user/user.repository';
 import { addressRepository } from '@/modules/user/address.repository';
 import { UserRole } from '@prisma/client';
-import { cacheService } from '@/core/cache/cache.service';
+import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';
 import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';

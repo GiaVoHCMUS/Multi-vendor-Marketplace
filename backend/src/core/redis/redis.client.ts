@@ -7,8 +7,8 @@ type RedisClient = {
 export const redisClient: RedisClient = {
   client: null,
   getInstance() {
-    // const url = `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`;
-    const url = process.env.REDIS_URL;
+    const url = `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`;
+    // const url = process.env.REDIS_URL;
     if (!this.client) {
       this.client = createClient({ url });
       this.client.on('error', (error) => {

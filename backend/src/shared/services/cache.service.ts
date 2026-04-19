@@ -1,12 +1,8 @@
-import { redisClient } from './redis';
+import { redisClient } from '../../core/redis/redis.client';
 const redis = redisClient.getInstance();
 
 export const cacheService = {
-  async getOrSet<T>(
-    key: string,
-    fetchFn: () => Promise<T>,
-    ttl: number = 3600,
-  ): Promise<T> {
+  async getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttl: number = 3600): Promise<T> {
     // Get cache
     const cachedData = await redis.get(key);
     if (cachedData) {

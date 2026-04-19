@@ -1,4 +1,4 @@
-import { redisClient } from '@/core/cache/redis';
+import { redisClient } from '@/core/redis/redis.client';
 import { CheckoutInput } from './order.type';
 import { AppError } from '@/shared/utils/AppError';
 import { prisma } from '@/core/config/prisma';
@@ -39,12 +39,10 @@ export const orderService = {
 
     const items = await redis.hGetAll(getCartKey(userId));
 
-    const cartItems = Object.entries(items ?? {}).map(
-      ([productId, quantity]) => ({
-        productId,
-        quantity: Number(quantity),
-      }),
-    );
+    const cartItems = Object.entries(items ?? {}).map(([productId, quantity]) => ({
+      productId,
+      quantity: Number(quantity),
+    }));
 
     if (cartItems.length == 0) {
       throw new AppError('Giỏ hàng rỗng', StatusCodes.BAD_REQUEST);
@@ -124,10 +122,7 @@ export const orderService = {
       // 2. Chia các orderGroup đó thành các Order nhỏ hơn (theo Shop)
       // Tạo Order theo từng shop và lưu OrderItem cho cho Order này, cũng như trừ số lượng Products của seller
       for (const [shopId, items] of shopMap) {
-        const shopTotal: number = items.reduce(
-          (sum, item) => sum + item.price * item.quantity,
-          0,
-        );
+        const shopTotal: number = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
         const order = await tx.order.create({
           data: {
@@ -160,9 +155,7 @@ export const orderService = {
 
     // Invalidate cache
     const pipeline = redis.multi();
-    products.forEach((product) =>
-      pipeline.del(CACHE_KEYS.PRODUCT.SLUG(product.slug)),
-    );
+    products.forEach((product) => pipeline.del(CACHE_KEYS.PRODUCT.SLUG(product.slug)));
     pipeline.incr(CACHE_KEYS.PRODUCT.TRACKER_LIST);
     await pipeline.exec();
 
