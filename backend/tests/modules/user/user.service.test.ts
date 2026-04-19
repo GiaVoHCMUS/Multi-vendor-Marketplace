@@ -30,7 +30,7 @@ jest.mock('@/modules/user/address.repository', () => ({
   },
 }));
 
-jest.mock('@/core/cache/cache.service', () => ({
+jest.mock('@/shared/services/cache.service', () => ({
   cacheService: {
     getOrSet: jest.fn((key, cb) => cb()), // Ép chạy callback để vào repository
     delete: jest.fn(),
