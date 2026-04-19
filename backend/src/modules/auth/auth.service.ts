@@ -7,13 +7,10 @@ import { UserRole } from '@prisma/client';
 import { sessionService } from '@/modules/auth/services/session.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
-import { redisClient } from '@/core/redis/redis.client';
-import { AUTH_TOKEN_KEYS, AUTH_TOKEN_TTL } from '@/shared/constants/auth-token.constants';
 import { SESSION_TTL } from '@/shared/constants/session.constants';
 import { StatusCodes } from 'http-status-codes';
 import { userRepository } from '../user/user.repository';
-
-const redis = redisClient.getInstance();
+import { authTokenService } from './services/auth-token.service';
 
 // src/modules/auth/auth.service.ts
 export const authService = {
@@ -49,9 +46,7 @@ export const authService = {
 
     // Tạo token xác thực và lưu vào Redis
     const verificationToken = uuidv4();
-    await redis.set(AUTH_TOKEN_KEYS.verifyEmail(verificationToken), user.id, {
-      EX: AUTH_TOKEN_TTL.VERIFY_EMAIL,
-    });
+    await authTokenService.saveVerifyEmailToken(user.id, verificationToken);
 
     await mailJob.sendWelcomeRegistration({
       to: user.email,
@@ -61,7 +56,7 @@ export const authService = {
   },
 
   verifyEmail: async (token: string) => {
-    const userId = await redis.get(AUTH_TOKEN_KEYS.verifyEmail(token));
+    const userId = await authTokenService.getUserIdByVerifyToken(token);
     if (!userId) {
       throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
     }
@@ -69,7 +64,7 @@ export const authService = {
     await userRepository.markEmailAsVerified(userId);
 
     // Xóa token sau khi dùng xong
-    await redis.del(AUTH_TOKEN_KEYS.verifyEmail(token));
+    await authTokenService.deleteVerifyEmailToken(token);
   },
 
   login: async (email: string, password: string) => {
@@ -149,9 +144,7 @@ export const authService = {
     }
 
     const resetToken = uuidv4();
-    await redis.set(AUTH_TOKEN_KEYS.resetPassword(resetToken), user.id, {
-      EX: AUTH_TOKEN_TTL.RESET_PASSWORD,
-    });
+    await authTokenService.saveResetPasswordToken(user.id, resetToken);
 
     // Gửi mail Reset Password qua Queue
     await mailJob.sendForgotPassword({
@@ -162,7 +155,7 @@ export const authService = {
   },
 
   resetPassword: async (token: string, password: string) => {
-    const userId = await redis.get(AUTH_TOKEN_KEYS.resetPassword(token));
+    const userId = await authTokenService.getUserIdByResetToken(token);
 
     if (!userId) {
       throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
@@ -172,7 +165,7 @@ export const authService = {
 
     await userRepository.updatePassword(userId, hashPassword);
 
-    await redis.del(AUTH_TOKEN_KEYS.resetPassword(token));
+    await authTokenService.deleteResetPasswordToken(token);
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
     await sessionService.deleteAllSessions(userId);
   },
