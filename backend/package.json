@@ -11,7 +11,11 @@
     "test": "jest --no-cache",
     "test:watch": "jest --watchAll --no-cache",
     "test:ci": "jest --ci --coverage --no-cache",
-    "tree": "npx tree -l 4 -I --ignore 'node_modules' --ignore 'coverage'"
+    "tree": "npx tree -l 4 -I --ignore 'node_modules' --ignore 'coverage'",
+    "test:load": "k6 run tests/load/product-test.js",
+    "test:load:summary": "k6 run --summary-export=load-report.json src/shared/tests/load/product_test.js",
+    "db:seed": "ts-node src/scripts/seed.ts",
+    "db:export-product-idxs": "ts-node src/scripts/export-product-ids.ts"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
@@ -44,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@faker-js/faker": "^10.4.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
@@ -52,7 +57,7 @@
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.6.0",
     "@types/nodemailer": "^7.0.11",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
