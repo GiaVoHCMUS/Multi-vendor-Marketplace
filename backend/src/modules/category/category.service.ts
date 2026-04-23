@@ -1,4 +1,3 @@
-import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { slug } from '@/shared/utils/slug';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.type';
@@ -41,17 +40,7 @@ export const categoryService = {
   },
 
   async create(data: CreateCategoryInput, imageUrl?: ImageType) {
-    const newSlug = slug.generate(data.name);
-
-    const category = await prisma.category.create({
-      data: {
-        name: data.name,
-        slug: newSlug,
-        parentId: data.parentId ?? null,
-        imageUrl: imageUrl?.url,
-        imagePublicId: imageUrl?.publicId,
-      },
-    });
+    const category = await categoryRepository.createCategoryById(data, imageUrl);
 
     await this.invalidateCategoryList();
 
@@ -59,7 +48,7 @@ export const categoryService = {
   },
 
   async update(id: number, data: UpdateCategoryInput, imageUrl?: ImageType) {
-    const category = await categoryRepository.findCategoryById(id);
+    const category = await categoryRepository.findById(id);
 
     if (!category) {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -72,8 +61,8 @@ export const categoryService = {
       imagePublicId: imageUrl ? imageUrl.publicId : category.imagePublicId,
       parentId: data.parentId ?? category.parentId,
     };
-    
-    const updatedCategory = categoryRepository.updateCategoryById(id, newCategory)
+
+    const updatedCategory = await categoryRepository.updateCategoryById(id, newCategory);
     await cacheService.delete(CACHE_KEYS.CATEGORY.SLUG(category.slug));
     await this.invalidateCategoryList();
 
@@ -81,7 +70,7 @@ export const categoryService = {
   },
 
   async delete(id: number) {
-    const category = await categoryRepository.findCategoryById(id);
+    const category = await categoryRepository.findById(id);
 
     if (!category) {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);

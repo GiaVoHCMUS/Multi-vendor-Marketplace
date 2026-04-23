@@ -24,10 +24,6 @@ class CategoryRepository extends BaseRepository<
     children: true,
   };
 
-  async findCategoryById(id: number) {
-    return this.findById(id);
-  }
-
   async getAll() {
     return this.findAll(
       {},
@@ -59,7 +55,7 @@ class CategoryRepository extends BaseRepository<
   }
 
   async deleteCategoryById(id: number) {
-    this.delete(id);
+    return this.delete(id);
   }
 }
 
