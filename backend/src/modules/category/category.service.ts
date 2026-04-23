@@ -7,6 +7,7 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { StatusCodes } from 'http-status-codes';
+import { categoryRepository } from './category.repository';
 
 export const categoryService = {
   async invalidateCategoryList() {
@@ -18,23 +19,7 @@ export const categoryService = {
 
     const cacheKey = CACHE_KEYS.CATEGORY.LIST(version);
 
-    return cacheService.getOrSet(
-      cacheKey,
-      async () => {
-        return prisma.category.findMany({
-          orderBy: { id: 'desc' },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            imageUrl: true,
-            parent: true,
-            children: true,
-          },
-        });
-      },
-      CACHE_TTL.WEEK,
-    );
+    return cacheService.getOrSet(cacheKey, () => categoryRepository.getAll(), CACHE_TTL.WEEK);
   },
 
   async getBySlug(slug: string) {
@@ -43,16 +28,8 @@ export const categoryService = {
     return cacheService.getOrSet(
       cacheKey,
       async () => {
-        const category = await prisma.category.findUnique({
-          where: { slug },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            imageUrl: true,
-            parentId: true,
-          },
-        });
+        const category = await categoryRepository.getBySlug(slug);
+
         if (!category) {
           throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
         }
@@ -71,8 +48,8 @@ export const categoryService = {
         name: data.name,
         slug: newSlug,
         parentId: data.parentId ?? null,
-        imageUrl: imageUrl?.url ?? null,
-        imagePublicId: imageUrl?.publicId ?? null,
+        imageUrl: imageUrl?.url,
+        imagePublicId: imageUrl?.publicId,
       },
     });
 
@@ -82,43 +59,37 @@ export const categoryService = {
   },
 
   async update(id: number, data: UpdateCategoryInput, imageUrl?: ImageType) {
-    const category = await prisma.category.findUnique({
-      where: { id },
-    });
+    const category = await categoryRepository.findCategoryById(id);
 
     if (!category) {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    const updatedCategory = await prisma.category.update({
-      where: { id },
-      data: {
-        name: data.name ?? category.name,
-        slug: data.name ? slug.generate(data.name) : category.slug,
-        imageUrl: imageUrl ? imageUrl.url : category.imageUrl,
-        imagePublicId: imageUrl ? imageUrl.publicId : category.imagePublicId,
-        parentId: data.parentId ?? category.parentId,
-      },
-    });
-
+    const newCategory = {
+      name: data.name ?? category.name,
+      slug: data.name ? slug.generate(data.name) : category.slug,
+      imageUrl: imageUrl ? imageUrl.url : category.imageUrl,
+      imagePublicId: imageUrl ? imageUrl.publicId : category.imagePublicId,
+      parentId: data.parentId ?? category.parentId,
+    };
+    
+    const updatedCategory = categoryRepository.updateCategoryById(id, newCategory)
+    await cacheService.delete(CACHE_KEYS.CATEGORY.SLUG(category.slug));
     await this.invalidateCategoryList();
 
     return updatedCategory;
   },
 
   async delete(id: number) {
-    const category = await prisma.category.findUnique({
-      where: { id },
-    });
+    const category = await categoryRepository.findCategoryById(id);
 
     if (!category) {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    await prisma.category.delete({
-      where: { id },
-    });
-
+    await cacheService.delete(CACHE_KEYS.CATEGORY.SLUG(category.slug));
     await this.invalidateCategoryList();
+
+    await categoryRepository.deleteCategoryById(id);
   },
 };
