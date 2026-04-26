@@ -37,7 +37,7 @@ const productBaseSchema = z.object({
 });
 
 export const productSchema = {
-  productQuery: z.object({
+  getAll: z.object({
     body: emptySchema,
     query: z
       .object({
@@ -50,20 +50,13 @@ export const productSchema = {
           .max(100, { message: 'Nội dung tìm kiếm quá dài' })
           .optional(),
 
-        minPrice: z.coerce
-          .number()
-          .min(0, { message: 'Giá tối thiểu phải >= 0' })
-          .optional(),
+        minPrice: z.coerce.number().min(0, { message: 'Giá tối thiểu phải >= 0' }).optional(),
 
-        maxPrice: z.coerce
-          .number()
-          .min(0, { message: 'Giá tối đa phải >= 0' })
-          .optional(),
+        maxPrice: z.coerce.number().min(0, { message: 'Giá tối đa phải >= 0' }).optional(),
 
         sort: z
           .enum(ALLOWED_SORT, {
-            message:
-              'Sort không hợp lệ (chỉ hỗ trợ price:asc hoặc price: desc)',
+            message: 'Sort không hợp lệ (chỉ hỗ trợ price:asc hoặc price: desc)',
           })
           .optional(),
 
@@ -71,21 +64,19 @@ export const productSchema = {
 
         shopSlug: z.string().optional(),
       })
-      .refine(
-        (data) =>
-          !data.minPrice || !data.maxPrice || data.minPrice <= data.maxPrice,
-        {
-          message: 'minPrice phải nhỏ hơn hoặc bằng maxPrice',
-          path: ['minPrice'],
-        },
-      ),
+      .refine((data) => !data.minPrice || !data.maxPrice || data.minPrice <= data.maxPrice, {
+        message: 'minPrice phải nhỏ hơn hoặc bằng maxPrice',
+        path: ['minPrice'],
+      }),
     params: emptySchema,
   }),
+
   create: z.object({
     body: productBaseSchema,
     query: emptySchema,
     params: emptySchema,
   }),
+
   update: z.object({
     body: productBaseSchema.partial(),
     query: emptySchema,
@@ -93,6 +84,7 @@ export const productSchema = {
       id: commonRules.id,
     }),
   }),
+
   delete: z.object({
     body: emptySchema,
     query: emptySchema,

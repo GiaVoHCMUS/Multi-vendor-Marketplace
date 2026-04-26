@@ -17,7 +17,7 @@ const router = Router();
 router.get(
   '/',
   rateLimitMiddlware(publicLimiter),
-  validate(productSchema.productQuery),
+  validate(productSchema.getAll),
   catchAsync(productController.getAll),
 );
 router.get(

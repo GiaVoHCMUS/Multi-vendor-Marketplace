@@ -1,15 +1,17 @@
-import { ImageType } from '@/shared/types/image.type';
-import { CreateProductInput, ProductQueryInput, UpdateProductInput } from './product.type';
-import { prisma } from '@/core/config/prisma';
-import { AppError } from '@/shared/utils/AppError';
-import { slug } from '@/shared/utils/slug';
-import { MESSAGE } from '@/shared/constants/message.constants';
-import { ProductStatus, ShopStatus } from '@prisma/client';
-import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
-import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
+import { MESSAGE } from '@/shared/constants/message.constants';
+import { cacheService } from '@/shared/services/cache.service';
+import { ImageType } from '@/shared/types/image.type';
+import { AppError } from '@/shared/utils/AppError';
 import { cursorUtil } from '@/shared/utils/cursor';
+import { slugHelper } from '@/shared/utils/slug';
+import { sortObject } from '@/shared/utils/sortObject';
+import { Prisma, ShopStatus } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
+import { categoryRepository } from '../category/category.repository';
+import { shopRepository } from '../shop/shop.repository';
+import { productRepository } from './product.repository';
+import { CreateProductInput, GetProductsQuery, UpdateProductInput } from './product.type';
 
 export const productService = {
   async invalidateProductList() {
@@ -17,18 +19,14 @@ export const productService = {
     await cacheService.invalidateTracker(CACHE_KEYS.PRODUCT.TRACKER_LIST);
   },
 
-  async getAll(queryInput: ProductQueryInput) {
-    const { limit, cursor, categorySlug, shopSlug, search, minPrice, maxPrice, sort } = queryInput;
+  async getAll(queryInput: GetProductsQuery) {
+    const { limit, categorySlug, shopSlug, search, minPrice, maxPrice, sort } = queryInput;
 
     const [category, shop] = await Promise.all([
       categorySlug
         ? cacheService.getOrSet(
             CACHE_KEYS.CATEGORY.ID_BY_SLUG(categorySlug),
-            () =>
-              prisma.category.findUnique({
-                where: { slug: categorySlug },
-                select: { id: true },
-              }),
+            () => categoryRepository.getBySlug(categorySlug),
             CACHE_TTL.LONG,
           )
         : null,
@@ -36,11 +34,7 @@ export const productService = {
       shopSlug
         ? cacheService.getOrSet(
             CACHE_KEYS.SHOP.ID_BY_SLUG(shopSlug),
-            () =>
-              prisma.shop.findUnique({
-                where: { slug: shopSlug },
-                select: { id: true },
-              }),
+            () => shopRepository.findShopBySlug(shopSlug),
             CACHE_TTL.LONG,
           )
         : null,
@@ -49,25 +43,12 @@ export const productService = {
     if ((shopSlug && !shop) || (categorySlug && !category)) {
       return {
         data: [],
-        meta: {
-          limit,
-          nextCursor: null,
-          filters: queryInput,
-        },
+        meta: { limit, nextCursor: null, filters: queryInput },
       };
     }
 
     // Lấy Versioning cho List Product
     const version = await cacheService.getTracker(CACHE_KEYS.PRODUCT.TRACKER_LIST);
-
-    // Hàm Helper để sort object keys
-    const sortObject = (obj: any) =>
-      Object.keys(obj)
-        .sort()
-        .reduce((res: any, key) => {
-          res[key] = obj[key];
-          return res;
-        }, {});
 
     // Tạo unique key dựa trên các tham số filter và IDs
     const cacheKey = CACHE_KEYS.PRODUCT.LIST(
@@ -84,75 +65,14 @@ export const productService = {
     return cacheService.getOrSet(
       cacheKey,
       async () => {
-        const { prismaArgs, meta } = new PrismaQueryHelper(queryInput)
-          .cursorPaginate('id')
-          .applyFilter(() => ({
-            deletedAt: null,
-            status: ProductStatus.PUBLISHED,
+        const categoryId = category ? category.id : undefined;
+        const shopId = shop ? shop.id : undefined;
+        const extraFilters = { categoryId, shopId };
 
-            // search
-            ...(search && {
-              name: {
-                contains: search,
-                mode: 'insensitive',
-              },
-            }),
-
-            // price
-            ...(minPrice !== undefined || maxPrice !== undefined
-              ? {
-                  price: {
-                    ...(minPrice !== undefined && { gte: minPrice }),
-                    ...(maxPrice !== undefined && { lte: maxPrice }),
-                  },
-                }
-              : {}),
-
-            // category
-            ...(category && { categoryId: category.id }),
-
-            // shop
-            ...(shop && { shopId: shop.id }),
-          }))
-          .build();
-
-        // Query
-        const products = await prisma.product.findMany({
-          ...prismaArgs,
-
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            price: true,
-            averageRating: true,
-            description: true,
-            stock: true,
-            status: true,
-
-            images: {
-              take: 1,
-              orderBy: { order: 'asc' },
-              select: { url: true },
-            },
-
-            shop: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
-
-            category: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
-          },
-        });
+        const { products, meta } = await productRepository.findProductList(
+          queryInput,
+          extraFilters,
+        );
 
         // Pagination logic
         const hasNext = products.length > limit;
@@ -175,9 +95,9 @@ export const productService = {
             [sortField]: (lastItem as any)[sortField],
           });
         }
-
+        
         // Format data
-        const data = items.map((p) => ({
+        const data = items.map((p: any) => ({
           id: p.id,
           name: p.name,
           slug: p.slug,
@@ -203,12 +123,12 @@ export const productService = {
             nextCursor,
 
             filters: {
-              search: search ?? null,
-              minPrice: minPrice ?? null,
-              maxPrice: maxPrice ?? null,
-              categorySlug: categorySlug ?? null,
-              shopSlug: shopSlug ?? null,
-              sort: sort ?? null,
+              search,
+              minPrice,
+              maxPrice,
+              categorySlug,
+              shopSlug,
+              sort,
             },
           },
         };
@@ -221,38 +141,7 @@ export const productService = {
     return cacheService.getOrSet(
       CACHE_KEYS.PRODUCT.SLUG(slug),
       async () => {
-        const product = await prisma.product.findUnique({
-          where: { slug },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-            price: true,
-            stock: true,
-            averageRating: true,
-
-            category: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                imageUrl: true,
-                parentId: true,
-              },
-            },
-            shop: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                description: true,
-                logoUrl: true,
-              },
-            },
-            reviews: true,
-          },
-        });
+        const product = await productRepository.findProductBySlug(slug);
 
         if (!product) {
           throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -264,17 +153,8 @@ export const productService = {
     );
   },
 
-  async create(data: CreateProductInput, images: ImageType[]) {
-    const shop = await prisma.shop.findFirst({
-      where: {
-        id: data.shopId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        status: true,
-      },
-    });
+  async create(userId: string, data: CreateProductInput, images: ImageType[]) {
+    const shop = await shopRepository.findShopByOwerId(userId);
 
     if (!shop) {
       throw new AppError(MESSAGE.SHOP.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -284,88 +164,63 @@ export const productService = {
       throw new AppError(MESSAGE.SHOP.NOT_ACTIVE, StatusCodes.FORBIDDEN);
     }
 
-    const category = await prisma.category.findUnique({
-      where: {
-        id: data.categoryId,
-      },
-    });
+    const category = await categoryRepository.findById(data.categoryId);
 
     if (!category) {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    const newSlug = slug.generate(data.name);
+    const createData: Prisma.ProductCreateInput = {
+      name: data.name,
+      slug: slugHelper.generate(data.name),
+      description: data.description,
+      price: data.price,
+      stock: data.stock,
+      status: data.status,
+      shop: {
+        connect: { id: shop.id },
+      },
+      category: {
+        connect: { id: data.categoryId },
+      },
+      images: {
+        create: images.map((img, index) => ({
+          url: img.url,
+          publicId: img.publicId,
+          order: index,
+        })),
+      },
+    };
 
     await this.invalidateProductList();
 
-    return prisma.product.create({
-      data: {
-        name: data.name,
-        slug: newSlug,
-        description: data.description ?? null,
-        price: data.price,
-        stock: data.stock,
-        status: data.status,
-        shopId: data.shopId,
-        categoryId: data.categoryId,
+    return productRepository.createProduct(createData);
+  },
+
+  async update(id: string, data: UpdateProductInput, images?: ImageType[]) {
+    const product = await productRepository.findProductById(id);
+
+    if (!product) {
+      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
+    }
+
+    const updateData: Prisma.ProductUpdateInput = {
+      ...data,
+      slug: data.name ? slugHelper.generate(data.name) : product.slug,
+      ...(images && {
         images: {
+          deleteMany: {},
+
           create: images.map((img, index) => ({
             url: img.url,
             publicId: img.publicId,
             order: index,
           })),
         },
-      },
+      }),
+    };
 
-      include: {
-        images: true,
-        category: true,
-        shop: true,
-      },
-    });
-  },
-
-  async update(id: string, data: UpdateProductInput, images?: ImageType[]) {
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: { images: true },
-    });
-
-    if (!product) {
-      throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
-    }
-
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-
-      data: {
-        name: data.name ?? product.name,
-        slug: data.name ? slug.generate(data.name) : product.slug,
-        description: data.description ?? product.description,
-        price: data.price ?? product.price,
-        stock: data.stock ?? product.stock,
-        status: data.status ?? product.status,
-        categoryId: data.categoryId ?? product.categoryId,
-
-        ...(images && {
-          images: {
-            deleteMany: {},
-
-            create: images.map((img, index) => ({
-              url: img.url,
-              publicId: img.publicId,
-              order: index,
-            })),
-          },
-        }),
-      },
-
-      include: {
-        images: true,
-        category: true,
-        shop: true,
-      },
-    });
+    const updatedProduct = await productRepository.updateProduct(id, updateData);
 
     await Promise.all([
       this.invalidateProductList(),
@@ -376,17 +231,13 @@ export const productService = {
   },
 
   async delete(id: string) {
-    const product = await prisma.product.findUnique({
-      where: { id },
-    });
+    const product = await productRepository.findProductById(id);
 
     if (!product) {
       throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    await prisma.product.delete({
-      where: { id },
-    });
+    await productRepository.delete(id);
 
     await Promise.all([
       this.invalidateProductList(),

@@ -9,7 +9,7 @@ import { StatusCodes } from 'http-status-codes';
 
 export const productController = {
   getAll: async (req: Request, res: Response) => {
-    const { query } = productSchema.productQuery.parse(req);
+    const { query } = productSchema.getAll.parse(req);
     const result = await productService.getAll(query);
 
     successResponse(
@@ -41,7 +41,7 @@ export const productController = {
       images = await imageService.uploadMultiple(files, 'product_images');
     }
 
-    const product = await productService.create(req.body, images);
+    const product = await productService.create(req.user!.id, req.body, images);
 
     successResponse(
       res,
