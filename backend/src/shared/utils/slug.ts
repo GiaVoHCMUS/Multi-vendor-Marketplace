@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import slugify from 'slugify';
 
-export const slug = {
+export const slugHelper = {
   generate: (text: string) => {
     const base = slugify(text, {
       lower: true,

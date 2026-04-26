@@ -1,5 +1,5 @@
 import { AppError } from '@/shared/utils/AppError';
-import { slug } from '@/shared/utils/slug';
+import { slugHelper } from '@/shared/utils/slug';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.type';
 import { ImageType } from '@/shared/types/image.type';
 import { MESSAGE } from '@/shared/constants/message.constants';
@@ -56,7 +56,7 @@ export const categoryService = {
 
     const newCategory = {
       name: data.name ?? category.name,
-      slug: data.name ? slug.generate(data.name) : category.slug,
+      slug: data.name ? slugHelper.generate(data.name) : category.slug,
       imageUrl: imageUrl ? imageUrl.url : category.imageUrl,
       imagePublicId: imageUrl ? imageUrl.publicId : category.imagePublicId,
       parentId: data.parentId ?? category.parentId,

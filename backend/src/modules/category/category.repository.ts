@@ -2,7 +2,7 @@ import { BaseRepository } from '@/shared/repositories/base.repository';
 import { Category, Prisma } from '@prisma/client';
 import { CreateCategoryInput } from './category.type';
 import { ImageType } from '@/shared/types/image.type';
-import { slug } from '@/shared/utils/slug';
+import { slugHelper } from '@/shared/utils/slug';
 
 class CategoryRepository extends BaseRepository<
   Category,
@@ -42,7 +42,7 @@ class CategoryRepository extends BaseRepository<
     return this.create(
       {
         ...data,
-        slug: slug.generate(data.name),
+        slug: slugHelper.generate(data.name),
         imageUrl: imageUrl?.url,
         imagePublicId: imageUrl?.publicId,
       },
