@@ -5,7 +5,6 @@ import { z } from 'zod';
 const ALLOWED_SORT = ['price:asc', 'price:desc'];
 
 const productBaseSchema = z.object({
-  shopId: commonRules.id,
   categoryId: commonRules.idInt,
   name: z
     .string({ message: 'Tên sản phẩm là bắt buộc' })
