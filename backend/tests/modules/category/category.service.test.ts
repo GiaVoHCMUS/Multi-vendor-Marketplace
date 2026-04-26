@@ -5,7 +5,7 @@ import { CACHE_KEYS } from '@/shared/constants/cache.constants';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { AppError } from '@/shared/utils/AppError';
-import { slug } from '@/shared/utils/slug';
+import { slugHelper } from '@/shared/utils/slug';
 
 jest.mock('@/modules/category/category.repository', () => ({
   categoryRepository: {
@@ -28,7 +28,7 @@ jest.mock('@/shared/services/cache.service', () => ({
 }));
 
 jest.mock('@/shared/utils/slug', () => ({
-  slug: {
+  slugHelper: {
     generate: jest.fn(),
   },
 }));
@@ -107,7 +107,7 @@ describe('categoryService', () => {
 
     it('should update category, delete old slug cache and invalidate list', async () => {
       (categoryRepository.findById as jest.Mock).mockResolvedValue(mockCategory1);
-      (slug.generate as jest.Mock).mockReturnValue(mockCategory1.slug);
+      (slugHelper.generate as jest.Mock).mockReturnValue(mockCategory1.slug);
       (categoryRepository.updateCategoryById as jest.Mock).mockResolvedValue({
         ...mockCategory1,
         name: 'Updated Name',
