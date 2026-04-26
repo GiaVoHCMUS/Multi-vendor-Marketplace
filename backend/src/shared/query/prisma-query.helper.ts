@@ -13,10 +13,9 @@ type PaginationMeta =
       cursorField: string;
     };
 
-export class PrismaQueryHelper<
-  TWhereInput extends Record<string, any>,
-  TOrderByInput = any,
-> {
+type RawQueryInput = Record<string, string | number | undefined>;
+
+export class PrismaQueryHelper<TWhereInput extends Record<string, any>, TOrderByInput = any> {
   private prismaQuery: {
     where?: Partial<TWhereInput>;
     orderBy?: TOrderByInput | TOrderByInput[];
@@ -28,7 +27,11 @@ export class PrismaQueryHelper<
 
   private meta: PaginationMeta | null = null;
 
-  constructor(private rawQuery: any) {}
+  private rawQuery: RawQueryInput;
+
+  constructor(rawQuery: RawQueryInput) {
+    this.rawQuery = rawQuery;
+  }
 
   // Offset Pagination
   paginate() {
@@ -59,20 +62,17 @@ export class PrismaQueryHelper<
     let sortOrder: 'asc' | 'desc' = 'desc';
 
     if (sort) {
-      const [field, order] = this.rawQuery.sort.split(':');
+      const [field, order] = (this.rawQuery.sort as string).split(':');
       sortField = field ?? cursorField;
       sortOrder = order === 'asc' ? 'asc' : 'desc';
     }
 
-    this.prismaQuery.orderBy = [
-      { [sortField]: sortOrder },
-      { id: sortOrder },
-    ] as TOrderByInput[];
+    this.prismaQuery.orderBy = [{ [sortField]: sortOrder }, { id: sortOrder }] as TOrderByInput[];
 
     if (cursor) {
       // this.prismaQuery.cursor = { [cursorField]: cursor };
       // this.prismaQuery.skip = 1;
-      const decoded = cursorUtil.decode(cursor);
+      const decoded = cursorUtil.decode(cursor as string);
 
       const operator = sortOrder === 'asc' ? 'gt' : 'lt';
 
@@ -83,10 +83,7 @@ export class PrismaQueryHelper<
           },
         },
         {
-          AND: [
-            { [sortField]: decoded[sortField] },
-            { id: { [operator]: decoded.id } },
-          ],
+          AND: [{ [sortField]: decoded[sortField] }, { id: { [operator]: decoded.id } }],
         },
       ] as any;
 
@@ -113,7 +110,7 @@ export class PrismaQueryHelper<
       throw new AppError('Không thể sắp xếp với phân trang theo con trỏ', 400);
     }
 
-    const parts = this.rawQuery.sort.split(',');
+    const parts = (this.rawQuery.sort as string).split(',');
 
     const orderBy = parts
       .map((part: string) => {
@@ -137,9 +134,7 @@ export class PrismaQueryHelper<
     const filterObj = callback(this.rawQuery);
 
     const cleaned = Object.fromEntries(
-      Object.entries(filterObj as any).filter(
-        ([_, v]) => v !== undefined && v !== '',
-      ),
+      Object.entries(filterObj as any).filter(([_, v]) => v !== undefined && v !== ''),
     ) as Partial<TWhereInput>;
 
     this.prismaQuery.where = {
