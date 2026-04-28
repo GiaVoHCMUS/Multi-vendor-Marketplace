@@ -1,0 +1,87 @@
+register:
+  post:
+    summary: Register new user
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.schema.yaml#/RegisterRequest'
+    responses:
+      201:
+        $ref: '../components/responses/base.response.yaml#/Success'
+
+login:
+  post:
+    summary: Login user
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.schema.yaml#/LoginRequest'
+    responses:
+      200:
+        $ref: '../components/responses/base.response.yaml#/LoginSuccess'
+
+refreshToken:
+  post:
+    summary: Refresh access token
+    tags: [Auth]
+    responses:
+      200:
+        $ref: '../components/responses/base.response.yaml#/TokenRefresh'
+
+logout:
+  post:
+    summary: Logout user
+    tags: [Auth]
+    security:
+      - bearerAuth: []
+    responses:
+      200:
+        $ref: '../components/responses/base.response.yaml#/Success'
+
+verifyEmail:
+  get:
+    summary: Verify email
+    tags: [Auth]
+    parameters:
+      - in: query
+        name: token
+        required: true
+        schema:
+          type: string
+    responses:
+      200:
+        $ref: '../components/responses/base.response.yaml#/Success'
+
+forgotPassword:
+  post:
+    summary: Send forgot password email
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.schema.yaml#/ForgotPasswordRequest'
+    responses:
+      200:
+        $ref: '../components/responses/base.response.yaml#/Success'
+
+resetPassword:
+  post:
+    summary: Reset password
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/auth.schema.yaml#/ResetPasswordRequest'
+    responses:
+      200:
+        $ref: '../components/responses/base.response.yaml#/Success'

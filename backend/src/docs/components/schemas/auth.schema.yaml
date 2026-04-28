@@ -1,0 +1,43 @@
+RegisterRequest:
+  type: object
+  required: [email, password, fullName]
+  properties:
+    email:
+      type: string
+      example: quocgia@gmail.com
+    password:
+      type: string
+      example: Voquocgia2005
+    fullName:
+      type: string
+      example: Quốc Gia
+
+LoginRequest:
+  type: object
+  required: [email, password]
+  properties:
+    email:
+      type: string
+      example: user@gmail.com
+    password:
+      type: string
+      example: 123456
+
+ForgotPasswordRequest:
+  type: object
+  required: [email]
+  properties:
+    email:
+      type: string
+      example: user@gmail.com
+
+ResetPasswordRequest:
+  type: object
+  required: [token, password]
+  properties:
+    token:
+      type: string
+      example: reset-token-123
+    password:
+      type: string
+      example: newpassword123
