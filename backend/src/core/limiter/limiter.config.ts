@@ -1,5 +1,5 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { redisClient } from '../cache/redis';
+import { redisClient } from '../redis/redis.client';
 
 const redis = redisClient.getInstance();
 const PREFIX = 'rate-limit';
