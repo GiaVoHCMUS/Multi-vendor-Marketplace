@@ -1,5 +1,5 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { redisClient } from '../cache/redis';
+import { redisClient } from '../redis/redis.client';
 
 const redis = redisClient.getInstance();
 const PREFIX = 'rate-limit';
@@ -8,7 +8,7 @@ const PREFIX = 'rate-limit';
 export const authLimiter = new RateLimiterRedis({
   storeClient: redis,
   keyPrefix: `${PREFIX}:auth`,
-  points: 5,
+  points: 50,
   duration: 15 * 60,
   blockDuration: 60 * 60,
   useRedisPackage: true,

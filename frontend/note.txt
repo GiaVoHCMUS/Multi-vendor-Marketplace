@@ -1,0 +1,8 @@
+src/
+ ├── api/            # Quản lý axiosClient
+ ├── components/     # Các component dùng chung (Button, Input, ProtectedRoute...)
+ ├── pages/          # Các trang chính (Login, Home, Dashboard...)
+ ├── store/          # Redux toolkit (slices, index.js)
+ ├── App.jsx         # Cấu hình Routes
+ ├── main.jsx        # Entry point
+ └── index.css       # Tailwind config

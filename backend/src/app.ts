@@ -5,10 +5,11 @@ import cookieParser from 'cookie-parser';
 import { successResponse } from './shared/utils/response';
 import { globalErrorHandler } from './shared/middleware/error.middleware';
 import { setupCron } from './jobs/cron';
-import swaggerUi from 'swagger-ui-express';
+// import swaggerUi from 'swagger-ui-express';
 import { registerRoutes } from './routes';
-import { loadSwagger } from './core/config/swagger';
+// import { loadSwagger } from './core/config/swagger';
 import { httpLogger } from './shared/middleware/http-logger.middleware';
+import cors from 'cors';
 
 const app: Application = express();
 
@@ -17,12 +18,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Middleware để đọc cookie
 
-const swagger = async () => {
-  const swaggerSpec = await loadSwagger();
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-};
-swagger();
-
+// const swagger = async () => {
+//   const swaggerSpec = await loadSwagger();
+//   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// };
+// swagger();
+app.use(cors());
 setupCron();
 
 registerRoutes(app);
