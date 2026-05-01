@@ -1,18 +1,19 @@
-import { redisClient } from '@/core/redis/redis.client';
 import { AddToCartInput } from './cart.type';
-import { prisma } from '@/core/config/prisma';
 import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
-import { ProductStatus } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
+import { CartRepository } from './repositories/cart.repository';
+import { productRepository } from '../products/product.repository';
 
-const redis = redisClient.getInstance();
-const CART_TTL = 7 * 24 * 60 * 60;
-const getCartKey = (userId: string) => `marketplace:cart:${userId}`;
+export class CartService {
+  private readonly cartRepo: CartRepository;
 
-export const cartService = {
+  constructor(cartRepo: CartRepository) {
+    this.cartRepo = cartRepo;
+  }
+
   async getCart(userId: string) {
-    const items = await redis.hGetAll(getCartKey(userId));
+    const items = await this.cartRepo.getAll(userId);
 
     const cartItems = Object.entries(items ?? {}).map(([productId, quantity]) => ({
       productId,
@@ -26,26 +27,7 @@ export const cartService = {
     // Lấy Product Information
     const productIds = cartItems.map((i) => i.productId);
 
-    const products = await prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-        deletedAt: null,
-        status: ProductStatus.PUBLISHED,
-      },
-      include: {
-        images: {
-          orderBy: { order: 'asc' },
-          take: 1,
-        },
-        shop: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-      },
-    });
+    const products = await productRepository.findPublishedByIds(productIds);
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -71,51 +53,34 @@ export const cartService = {
     const totalItems = populatedItems.reduce((acc, item) => acc + item.quantity, 0);
 
     return { items: populatedItems, totalItems };
-  },
+  }
 
   async addToCart(userId: string, item: AddToCartInput) {
-    const product = await prisma.product.findFirst({
-      where: {
-        id: item.productId,
-        deletedAt: null,
-        status: ProductStatus.PUBLISHED,
-      },
-    });
+    const product = await productRepository.findPublishedById(item.productId);
 
     if (!product) {
       throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    const cartKey = getCartKey(userId);
-
-    const currentQty = await redis.hGet(cartKey, item.productId);
+    const currentQty = await this.cartRepo.get(userId, item.productId);
     const newQty = Number(currentQty ?? 0) + item.quantity;
 
     if (newQty > product.stock) {
       throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, StatusCodes.BAD_REQUEST);
     }
 
-    await redis.hIncrBy(cartKey, item.productId, item.quantity);
-
-    await redis.expire(cartKey, CART_TTL);
-  },
+    await this.cartRepo.increment(userId, item.productId, item.quantity);
+    await this.cartRepo.setTTL(userId);
+  }
 
   async updateItem(userId: string, productId: string, quantity: number) {
-    const cartKey = getCartKey(userId);
-
-    const exists = await redis.hExists(cartKey, productId);
+    const exists = await this.cartRepo.exists(userId, productId);
 
     if (!exists) {
       throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, StatusCodes.NOT_FOUND);
     }
 
-    const product = await prisma.product.findFirst({
-      where: {
-        id: productId,
-        deletedAt: null,
-        status: ProductStatus.PUBLISHED,
-      },
-    });
+    const product = await productRepository.findPublishedById(productId);
 
     if (!product) {
       throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, StatusCodes.NOT_FOUND);
@@ -125,18 +90,15 @@ export const cartService = {
       throw new AppError(MESSAGE.CART.QUANTITY_EXCEEDS_STOCK, StatusCodes.BAD_REQUEST);
     }
 
-    await redis.hSet(cartKey, productId, quantity);
-
-    await redis.expire(cartKey, CART_TTL);
-  },
+    await this.cartRepo.set(userId, productId, quantity);
+    await this.cartRepo.setTTL(userId);
+  }
 
   async removeFromCart(userId: string, productId: string) {
-    const cartKey = getCartKey(userId);
-
-    await redis.hDel(cartKey, productId);
-  },
+    await this.cartRepo.remove(userId, productId);
+  }
 
   async clearCart(userId: string) {
-    await redis.del(getCartKey(userId));
-  },
-};
+    await this.cartRepo.clear(userId);
+  }
+}

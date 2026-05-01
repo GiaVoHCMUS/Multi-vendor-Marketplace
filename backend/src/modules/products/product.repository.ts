@@ -71,6 +71,39 @@ class ProductRepository extends BaseRepository<
     return this.findOne({ slug, deletedAt: null }, { select: this.productWtthReviewsSelect });
   }
 
+  async findPublishedById(productId: string) {
+    return this.findOne({
+      id: productId,
+      deletedAt: null,
+      status: ProductStatus.PUBLISHED,
+    });
+  }
+  async findPublishedByIds(productIds: string[]) {
+    // 1. Định nghĩa cấu trúc query để Prisma helper có thể tính toán Type
+    const queryOptions = {
+      include: {
+        images: { orderBy: { order: 'asc' } as const, take: 1 },
+        shop: { select: { id: true, name: true, slug: true } },
+      },
+    } satisfies Prisma.ProductFindManyArgs;
+
+    // 2. Tạo Type từ cấu trúc query trên
+    type ProductWithRelations = Prisma.ProductGetPayload<typeof queryOptions>;
+
+    // 3. Gọi hàm findAll và ép kiểu trả về (As)
+    // Vì BaseRepository trả về Product[], chúng ta cần cast qua unknown rồi mới qua type mong muốn
+    const products = await this.findAll(
+      {
+        id: { in: productIds },
+        deletedAt: null,
+        status: ProductStatus.PUBLISHED,
+      },
+      queryOptions,
+    );
+
+    return products as unknown as ProductWithRelations[];
+  }
+
   async findProductList(
     queryInput: GetProductsQuery,
     extraFilters: { categoryId?: number; shopId?: string },

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { cartService } from './cart.service';
+import { cartService } from './cart.module'; 
 import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
