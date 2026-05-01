@@ -21,7 +21,7 @@ export class CartService {
     }));
 
     if (cartItems.length === 0) {
-      return { cartItems: [], totalItems: 0 };
+      return { items: [], totalItems: 0 };
     }
 
     // Lấy Product Information
@@ -83,7 +83,7 @@ export class CartService {
     const product = await productRepository.findPublishedById(productId);
 
     if (!product) {
-      throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, StatusCodes.NOT_FOUND);
+      throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     if (quantity > product.stock) {
