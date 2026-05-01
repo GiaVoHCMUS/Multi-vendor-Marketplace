@@ -1,6 +1,6 @@
 import { protect } from '@/shared/middleware/auth.middleware';
 import { Router } from 'express';
-import { cartController } from './cart.controller';
+import { cartController } from './cart.module'; 
 import { validate } from '@/shared/middleware/validate.middleware';
 import { cartSchema } from './cart.schema';
 import { catchAsync } from '@/shared/utils/catchAsync';
