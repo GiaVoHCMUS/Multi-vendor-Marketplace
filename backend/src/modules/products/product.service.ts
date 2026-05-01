@@ -95,7 +95,7 @@ export const productService = {
             [sortField]: (lastItem as any)[sortField],
           });
         }
-        
+
         // Format data
         const data = items.map((p: any) => ({
           id: p.id,

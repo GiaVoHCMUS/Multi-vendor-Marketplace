@@ -1,6 +1,6 @@
 import { BaseRepository } from '@/shared/repositories/base.repository';
 import { ImageType } from '@/shared/types/image.type';
-import { slug } from '@/shared/utils/slug';
+import { slugHelper } from '@/shared/utils/slug';
 import { Prisma, Shop, ShopStatus } from '@prisma/client';
 import { RegisterShopInput } from './shop.type';
 
@@ -16,6 +16,16 @@ class ShopRepository extends BaseRepository<
   }
 
   // Định nghĩa các trường mặc định muốn trả về cho Shop để dùng chung
+  private readonly shopSelect = {
+    id: true,
+    ownerId: true,
+    name: true,
+    slug: true,
+    description: true,
+    logoUrl: true,
+    status: true,
+    balance: true,
+  };
 
   async findShopByOwerId(ownerId: string) {
     return this.findOne(
@@ -31,7 +41,7 @@ class ShopRepository extends BaseRepository<
         logoUrl: logoUrl?.url,
         logoPublicId: logoUrl?.publicId,
         ownerId: userId,
-        slug: slug.generate(data.name),
+        slug: slugHelper.generate(data.name),
         description: data.description ?? '',
         status: ShopStatus.PENDING,
       },
@@ -42,6 +52,15 @@ class ShopRepository extends BaseRepository<
           deletedAt: true,
           logoPublicId: true,
         },
+      },
+    );
+  }
+
+  async findShopBySlug(shopSlug: string) {
+    return this.findOne(
+      { slug: shopSlug },
+      {
+        select: this.shopSelect,
       },
     );
   }
