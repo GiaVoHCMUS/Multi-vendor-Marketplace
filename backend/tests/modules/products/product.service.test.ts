@@ -40,7 +40,7 @@ jest.mock('@/modules/shop/shop.repository', () => ({
   },
 }));
 
-jest.mock('@/modules/products/product.repository', () => ({
+jest.mock('@/modules/products/repositories/product.repository', () => ({
   productRepository: {
     findProductList: jest.fn(),
     findProductBySlug: jest.fn(),

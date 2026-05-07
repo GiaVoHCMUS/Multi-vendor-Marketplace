@@ -5,7 +5,7 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { AppError } from '@/shared/utils/AppError';
 import { StatusCodes } from 'http-status-codes';
 
-jest.mock('@/modules/products/product.repository', () => ({
+jest.mock('@/modules/products/repositories/product.repository', () => ({
   productRepository: {
     findPublishedById: jest.fn(),
     findPublishedByIds: jest.fn(),
