@@ -1,5 +1,5 @@
 import { categoryRepository } from '@/modules/category/category.repository';
-import { productRepository } from '@/modules/products/product.repository';
+import { productRepository } from '@/modules/products/repositories/product.repository';
 import { productService } from '@/modules/products/product.service';
 import { shopRepository } from '@/modules/shop/shop.repository';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';

@@ -1,9 +1,9 @@
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { BaseRepository } from '@/shared/repositories/base.repository';
 import { Prisma, Product, ProductStatus } from '@prisma/client';
-import { GetProductsQuery } from './product.type';
+import { GetProductsQuery } from '../product.type';
 
-class ProductRepository extends BaseRepository<
+export class ProductRepository extends BaseRepository<
   Product,
   Prisma.ProductCreateInput,
   Prisma.ProductUpdateInput,
@@ -102,6 +102,27 @@ class ProductRepository extends BaseRepository<
     );
 
     return products as unknown as ProductWithRelations[];
+  }
+
+  async findProductsForCheckout(productIds: string[]) {
+    return this.findAll(
+      {
+        id: { in: productIds },
+        deletedAt: null,
+        status: ProductStatus.PUBLISHED,
+      },
+      {
+        select: {
+          id: true,
+          shopId: true,
+          categoryId: true,
+          name: true,
+          slug: true,
+          price: true,
+          stock: true,
+        },
+      },
+    );
   }
 
   async findProductList(

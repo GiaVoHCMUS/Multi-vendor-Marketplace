@@ -1,6 +1,6 @@
 import { CartService } from '@/modules/cart/cart.service';
 import { RedisCartRepository } from '@/modules/cart/repositories/redis-cart.cache';
-import { productRepository } from '@/modules/products/product.repository';
+import { productRepository } from '@/modules/products/repositories/product.repository';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { AppError } from '@/shared/utils/AppError';
 import { StatusCodes } from 'http-status-codes';

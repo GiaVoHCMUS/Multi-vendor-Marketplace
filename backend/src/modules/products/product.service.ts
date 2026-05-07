@@ -10,7 +10,7 @@ import { Prisma, ShopStatus } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 import { categoryRepository } from '../category/category.repository';
 import { shopRepository } from '../shop/shop.repository';
-import { productRepository } from './product.repository';
+import { productRepository } from './repositories/product.repository';
 import { CreateProductInput, GetProductsQuery, UpdateProductInput } from './product.type';
 
 export const productService = {
