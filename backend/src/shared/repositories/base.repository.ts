@@ -1,7 +1,14 @@
 import { prisma } from '@/core/config/prisma';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { IRepository } from './repository.interface';
 
-export abstract class BaseRepository<T, CreateInput, UpdateInput, Args, W> {
+export abstract class BaseRepository<T, CreateInput, UpdateInput, Args, W> implements IRepository<
+  T,
+  CreateInput,
+  UpdateInput,
+  Args,
+  W
+> {
   protected modelName: keyof PrismaClient;
   protected client: PrismaClient | Prisma.TransactionClient;
 
@@ -39,19 +46,15 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, Args, W> {
     });
   }
 
-  async findAll(where: W, args?: Args): Promise<T[]> {
-    return await this.modelDelegate.findMany({ where, ...args });
+  async findAll(where?: W, args?: Args): Promise<T[]> {
+    return await this.modelDelegate.findMany({ ...(where && { where }), ...args });
   }
 
   async create(data: CreateInput, args?: Args): Promise<T> {
     return await this.modelDelegate.create({ data, ...args });
   }
 
-  async update(
-    id: string | number,
-    data: UpdateInput,
-    args?: Args,
-  ): Promise<T> {
+  async update(id: string | number, data: UpdateInput, args?: Args): Promise<T> {
     return await this.modelDelegate.update({
       where: { id },
       data,
@@ -65,6 +68,6 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, Args, W> {
   }
 
   async count(where?: W): Promise<number> {
-    return await this.modelDelegate.count({ where });
+    return await this.modelDelegate.count({ ...(where && { where }) });
   }
 }
