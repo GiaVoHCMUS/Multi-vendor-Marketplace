@@ -132,3 +132,7 @@ Trong Product sau này có thể thêm:
   price:asc,createdAt:desc (multi sort)
 
   Có thêm hash md5 cho cache key
+
+Có lỗi nè:
+  Khi đặt hàng mà COD -> Đặt hàng thành công
+  Còn VNPAY thì là -> Thanh toán thành công
