@@ -3,7 +3,7 @@ import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { CartRepository } from './repositories/cart.repository';
-import { productRepository } from '../products/product.repository';
+import { productRepository } from '../products/repositories/product.repository';
 
 export class CartService {
   private readonly cartRepo: CartRepository;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { orderController } from './order.controller';
+import { orderController } from './order.module';
 import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { orderSchema } from './order.schema';
@@ -10,11 +10,7 @@ import { catchAsync } from '@/shared/utils/catchAsync';
 const router = Router();
 
 router.use(protect);
-router.get(
-  '/',
-  validate(orderSchema.getMyOrder),
-  catchAsync(orderController.getMyOrders),
-);
+router.get('/', validate(orderSchema.getMyOrder), catchAsync(orderController.getMyOrders));
 router.post(
   '/',
   rateLimitMiddlware(transactionLimiter),

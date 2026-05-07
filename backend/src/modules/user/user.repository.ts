@@ -1,7 +1,7 @@
 import { BaseRepository } from '@/shared/repositories/base.repository';
 import { User, Prisma } from '@prisma/client';
 
-class UserRepository extends BaseRepository<
+export class UserRepository extends BaseRepository<
   User,
   Prisma.UserCreateInput,
   Prisma.UserUpdateInput,
