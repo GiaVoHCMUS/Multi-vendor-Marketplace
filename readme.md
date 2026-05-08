@@ -1,5 +1,7 @@
 # 🛒 Multi-Vendor Marketplace (Mini Shopee/Tiki)
 
+[![Backend CI](https://github.com/GiaVoHCMUS/Multi-vendor-Marketplace/actions/workflows/ci.yml/badge.svg)](https://github.com/GiaVoHCMUS/Multi-vendor-Marketplace/actions/workflows/ci.yml)
+
 ## 📚 Table of Contents
 
 - [📌 Overview](#-overview)
