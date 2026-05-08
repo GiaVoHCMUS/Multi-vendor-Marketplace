@@ -1,10 +1,10 @@
 import { RegisterShopInput, UpdateMyShopInput } from './shop.type';
 import { ImageType } from '@/shared/types/image.type';
-import { AppError } from '@/shared/utils/AppError';
 import { slugHelper } from '@/shared/utils/slug';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { ShopRepository } from './shop.repository';
+import { AppError } from '@/shared/utils/AppError';
 
 export class ShopService {
   constructor(private readonly shopRepo: ShopRepository) {}
