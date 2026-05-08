@@ -53,6 +53,7 @@ To ensure ultra-fast API response times, heavy and scheduled tasks are offloaded
 * **Vendor Onboarding & Dashboard:** Sellers can manage inventory, track split-orders, and monitor revenue. Requires Admin approval workflow.
 * **Standardized API Envelope:** All endpoints strictly follow a predictable `success/data/meta/message` JSON structure.
 * **Unit & Load Tested:** Core business logic is covered by **Jest**, with performance bottlenecks tested via **k6**.
+![Test Coverage](./backend/assets/coverage-report.png)
 
 ---
 
