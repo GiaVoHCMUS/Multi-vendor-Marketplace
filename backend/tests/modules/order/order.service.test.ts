@@ -14,6 +14,15 @@ jest.mock('@/modules/payment/payment.service', () => ({
   paymentService: { createPayment: jest.fn() },
 }));
 
+jest.mock('@/shared/services/cache.service', () => ({
+  cacheService: {
+    getOrSet: jest.fn((key, cb) => cb()), // Ép chạy callback để vào repository
+    getTracker: jest.fn(),
+    invalidateTracker: jest.fn(),
+    delete: jest.fn(),
+  },
+}));
+
 describe('OrderService', () => {
   let mockCartRepo: any;
   let mockProductRepo: any;
@@ -40,6 +49,8 @@ describe('OrderService', () => {
       findOrderDetail: jest.fn(),
       findOrderWithDetails: jest.fn(),
       updateStatusTransaction: jest.fn(),
+      findShopOrders: jest.fn(),
+      getShopAnalyticsStats: jest.fn(),
     };
 
     mockUserRepo = {
@@ -151,7 +162,7 @@ describe('OrderService', () => {
     it('should checkout successfully with VNPAY payment', async () => {
       const paymentUrl = 'http://vnpay.url';
       const vnpayData = { ...checkoutData, paymentMethod: PaymentMethod.VNPAY };
-      
+
       mockUserRepo.getProfileById.mockResolvedValue(user);
       mockCartRepo.getAll.mockResolvedValue({ 'prod-1': '1' });
       mockProductRepo.findProductsForCheckout.mockResolvedValue([
@@ -227,13 +238,13 @@ describe('OrderService', () => {
   });
 
   describe('updateOrderStatus()', () => {
-    const sellerId = 'seller-1';
+    const shopId = 'shop-1';
     const orderId = 'order-1';
 
     it('should throw error if order not found', async () => {
       mockOrderRepo.findOrderWithDetails.mockResolvedValue(null);
 
-      const promise = orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED, sellerId);
+      const promise = orderService.updateOrderStatus(shopId, orderId, OrderStatus.CONFIRMED);
 
       await expect(promise).rejects.toThrow(AppError);
       await expect(promise).rejects.toMatchObject({
@@ -245,10 +256,10 @@ describe('OrderService', () => {
     it('should throw error if seller is forbidden', async () => {
       mockOrderRepo.findOrderWithDetails.mockResolvedValue({
         id: orderId,
-        shop: { ownerId: 'other-seller' },
+        shop: { ownerId: 'other-shop-id' },
       });
 
-      const promise = orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED, sellerId);
+      const promise = orderService.updateOrderStatus(shopId, orderId, OrderStatus.CONFIRMED);
 
       await expect(promise).rejects.toThrow(AppError);
       await expect(promise).rejects.toMatchObject({
@@ -261,12 +272,12 @@ describe('OrderService', () => {
       mockOrderRepo.findOrderWithDetails.mockResolvedValue({
         id: orderId,
         status: OrderStatus.PENDING, // Đã giao xong thì không được chuyển trạng thái nữa
-        shop: { ownerId: sellerId },
+        shopId,
       });
 
       const spy = jest.spyOn(mockOrderRepo, 'updateStatusTransaction');
 
-      const promise = orderService.updateOrderStatus(orderId, OrderStatus.SHIPPING, sellerId);
+      const promise = orderService.updateOrderStatus(shopId, orderId, OrderStatus.SHIPPING);
 
       await expect(promise).rejects.toThrow(AppError);
       await expect(promise).rejects.toMatchObject({
@@ -279,7 +290,7 @@ describe('OrderService', () => {
       const mockOrder = {
         id: orderId,
         status: OrderStatus.PENDING,
-        shop: { ownerId: sellerId },
+        shopId,
       };
       mockOrderRepo.findOrderWithDetails.mockResolvedValue(mockOrder);
       mockOrderRepo.updateStatusTransaction.mockResolvedValue({
@@ -287,13 +298,66 @@ describe('OrderService', () => {
         status: OrderStatus.CONFIRMED,
       });
 
-      await orderService.updateOrderStatus(orderId, OrderStatus.CONFIRMED, sellerId);
+      await orderService.updateOrderStatus(shopId, orderId, OrderStatus.CONFIRMED);
 
       expect(mockOrderRepo.updateStatusTransaction).toHaveBeenCalledWith(
         orderId,
         mockOrder,
         OrderStatus.CONFIRMED,
       );
+    });
+  });
+
+  describe('getShopOrder()', () => {
+    const shopId = 'shop-1';
+
+    it('should throw error if meta type is not offset', async () => {
+      mockOrderRepo.findShopOrders.mockResolvedValue({
+        orders: [],
+        total: 0,
+        meta: { type: 'cursor' }, // Sai kiểu phân trang
+      });
+
+      const promise = orderService.getShopOrders(shopId, {});
+
+      await expect(promise).rejects.toThrow(AppError);
+      await expect(promise).rejects.toMatchObject({
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    });
+
+    it('should return shop orders with correct meta', async () => {
+      mockOrderRepo.findShopOrders.mockResolvedValue({
+        orders: [{ id: 'order-1', shopId }],
+        total: 5,
+        meta: { type: 'offset', page: 1, limit: 10 },
+      });
+
+      const result = await orderService.getShopOrders(shopId, {});
+
+      expect(result.data).toHaveLength(1);
+      expect(result.meta.limit).toBe(10);
+      expect(result.meta.totalItems).toBe(5);
+      expect(mockOrderRepo.findShopOrders).toHaveBeenCalledWith(shopId, {});
+    });
+  });
+
+  describe('getShopAnalytics()', () => {
+    it('should call getOrSet cache and return analytics data', async () => {
+      const shopId = 'shop-1';
+      const mockStats = {
+        totalOrders: 20,
+        deliveredOrders: 15,
+        revenue: 5000000,
+      };
+
+      mockOrderRepo.getShopAnalyticsStats.mockResolvedValue(mockStats);
+
+      const result = await orderService.getShopAnalytics(shopId);
+
+      expect(mockOrderRepo.getShopAnalyticsStats).toHaveBeenCalledWith(shopId);
+
+      expect(result).toEqual(mockStats);
     });
   });
 });
