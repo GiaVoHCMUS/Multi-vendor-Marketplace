@@ -1,5 +1,6 @@
+import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { BaseRepository } from '@/shared/repositories/base.repository';
-import { User, Prisma } from '@prisma/client';
+import { User, Prisma, PrismaClient } from '@prisma/client';
 
 export class UserRepository extends BaseRepository<
   User,
@@ -52,15 +53,52 @@ export class UserRepository extends BaseRepository<
   }
 
   async findByEmail(email: string) {
-    return this.findOne(
-      { email, deletedAt: null },
-    );
+    return this.findOne({ email, deletedAt: null });
   }
 
   async markEmailAsVerified(userId: string) {
     return this.update(userId, {
       isVerified: true,
     });
+  }
+
+  async softDeleteUser(userId: string) {
+    return this.update(userId, {
+      deletedAt: new Date(),
+    });
+  }
+
+  async countActiveUsers() {
+    return this.count({ deletedAt: null });
+  }
+
+  async findUsersForAdmin(queryInput: any) {
+    const queryHelper = new PrismaQueryHelper(queryInput)
+      .paginate()
+      .applyFilter((q) => ({
+        deletedAt: null,
+        ...(q.search && {
+          OR: [
+            { email: { contains: q.search, mode: 'insensitive' } },
+            { fullName: { contains: q.search, mode: 'insensitive' } },
+          ],
+        }),
+      }))
+      .sort();
+
+    const { prismaArgs, meta } = queryHelper.build();
+
+    const prismaUser = (this.client as PrismaClient).user;
+
+    const [users, total] = await Promise.all([
+      prismaUser.findMany({
+        ...prismaArgs,
+        orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
+      }),
+      prismaUser.count({ where: prismaArgs.where }),
+    ]);
+
+    return { users, total, meta };
   }
 }
 

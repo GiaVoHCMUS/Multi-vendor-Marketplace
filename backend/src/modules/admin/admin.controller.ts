@@ -1,48 +1,40 @@
 import { Request, Response } from 'express';
-import { adminService } from './admin.service';
 import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
+import { AdminService } from './admin.service';
 
-export const adminController = {
-  approveShop: async (req: Request, res: Response) => {
-    const shop = await adminService.approveShop(req.params.id as string);
+export class AdminController {
+  constructor(private readonly adminService: AdminService) {}
 
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.ADMIN.APPROVE_SHOP_SUCCESS,
-      shop,
-    );
-  },
+  approveShop = async (req: Request, res: Response) => {
+    const shop = await this.adminService.approveShop(req.params.id as string);
 
-  banShop: async (req: Request, res: Response) => {
-    const shop = await adminService.banShop(req.params.id as string);
+    successResponse(res, StatusCodes.OK, MESSAGE.ADMIN.APPROVE_SHOP_SUCCESS, shop);
+  };
+
+  banShop = async (req: Request, res: Response) => {
+    const shop = await this.adminService.banShop(req.params.id as string);
 
     successResponse(res, StatusCodes.OK, MESSAGE.ADMIN.BAN_SHOP_SUCCESS, shop);
-  },
+  };
 
-  banUser: async (req: Request, res: Response) => {
-    const user = await adminService.banUser(req.params.id as string);
+  banUser = async (req: Request, res: Response) => {
+    const user = await this.adminService.banUser(req.params.id as string);
 
     successResponse(res, StatusCodes.OK, MESSAGE.ADMIN.BAN_USER_SUCCESS, user);
-  },
+  };
 
-  getStats: async (req: Request, res: Response) => {
-    const stats = await adminService.getStats();
+  getStats = async (req: Request, res: Response) => {
+    const stats = await this.adminService.getStats();
 
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.ADMIN.GET_STATS_SUCCESS,
-      stats,
-    );
-  },
+    successResponse(res, StatusCodes.OK, MESSAGE.ADMIN.GET_STATS_SUCCESS, stats);
+  };
 
-  getPendingShops: async (req: Request, res: Response) => {
+  getPendingShops = async (req: Request, res: Response) => {
     const page = Number(req.query.page);
     const limit = Number(req.query.limit);
-    const result = await adminService.getPendingShops({ page, limit });
+    const result = await this.adminService.getPendingShops({ page, limit });
 
     successResponse(
       res,
@@ -51,22 +43,16 @@ export const adminController = {
       result.data,
       result.meta,
     );
-  },
+  };
 
-  getUsers: async (req: Request, res: Response) => {
-    const result = await adminService.getUsers(req.query);
+  getUsers = async (req: Request, res: Response) => {
+    const result = await this.adminService.getUsers(req.query);
 
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.ADMIN.GET_USERS_SUCCESS,
-      result.data,
-      result.meta,
-    );
-  },
+    successResponse(res, StatusCodes.OK, MESSAGE.ADMIN.GET_USERS_SUCCESS, result.data, result.meta);
+  };
 
-  getOrders: async (req: Request, res: Response) => {
-    const result = await adminService.getOrders(req.query);
+  getOrders = async (req: Request, res: Response) => {
+    const result = await this.adminService.getOrders(req.query);
 
     successResponse(
       res,
@@ -75,5 +61,5 @@ export const adminController = {
       result.data,
       result.meta,
     );
-  },
-};
+  };
+}

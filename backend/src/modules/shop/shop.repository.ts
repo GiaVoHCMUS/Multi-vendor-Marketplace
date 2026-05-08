@@ -1,8 +1,18 @@
 import { BaseRepository } from '@/shared/repositories/base.repository';
 import { ImageType } from '@/shared/types/image.type';
 import { slugHelper } from '@/shared/utils/slug';
-import { Prisma, Shop, ShopStatus } from '@prisma/client';
+import { Prisma, PrismaClient, Shop, ShopStatus, UserRole } from '@prisma/client';
 import { RegisterShopInput } from './shop.type';
+import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
+
+// Định nghĩa Type Shop kèm Owner bằng GetPayload của Prisma
+export type ShopWithOwner = Prisma.ShopGetPayload<{
+  include: {
+    owner: {
+      select: { email: true; fullName: true };
+    };
+  };
+}>;
 
 export class ShopRepository extends BaseRepository<
   Shop,
@@ -55,9 +65,61 @@ export class ShopRepository extends BaseRepository<
   }
 
   async findShopWithOwner(shopId: string) {
-    return this.findById(shopId, {
+    return (await this.findById(shopId, {
       include: { owner: { select: { email: true, fullName: true } } },
+    })) as ShopWithOwner | null;
+  }
+
+  async approveShopTransaction(shopId: string, ownerId: string) {
+    const prismaClient = this.client as PrismaClient;
+
+    return await prismaClient.$transaction(async (tx) => {
+      const updated = await tx.shop.update({
+        where: { id: shopId },
+        data: { status: ShopStatus.ACTIVE },
+      });
+
+      await tx.user.update({
+        where: { id: ownerId },
+        data: { role: UserRole.SELLER },
+      });
+
+      return updated;
     });
+  }
+
+  async updateShopStatus(shopId: string, status: ShopStatus) {
+    return this.update(shopId, { status });
+  }
+
+  async countActiveShops() {
+    return this.count({ deletedAt: null });
+  }
+
+  async findPendingShops(queryInput: any) {
+    const queryHelper = new PrismaQueryHelper(queryInput)
+      .paginate()
+      .applyFilter(() => ({
+        status: ShopStatus.PENDING,
+        deletedAt: null,
+      }))
+      .sort();
+
+    const { prismaArgs, meta } = queryHelper.build();
+    const prismaShop = (this.client as PrismaClient).shop;
+
+    const [shops, total] = await Promise.all([
+      prismaShop.findMany({
+        ...prismaArgs,
+        include: {
+          owner: { select: { id: true, email: true, fullName: true } },
+        },
+        orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
+      }),
+      prismaShop.count({ where: prismaArgs.where }),
+    ]);
+
+    return { shops, total, meta };
   }
 }
 

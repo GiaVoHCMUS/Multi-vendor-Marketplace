@@ -1,6 +1,6 @@
 import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
 import { Router } from 'express';
-import { adminController } from './admin.controller';
+import { adminController } from './admin.module';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { adminSchema } from './admin.schema';
 import { catchAsync } from '@/shared/utils/catchAsync';

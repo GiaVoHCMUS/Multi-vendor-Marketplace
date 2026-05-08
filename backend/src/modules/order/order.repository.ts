@@ -409,4 +409,43 @@ export class OrderRepository extends BaseRepository<
       revenue: revenue._sum.totalAmount ? Number(revenue._sum.totalAmount) : 0,
     };
   }
+
+  async countTotalOrders() {
+    return this.count();
+  }
+
+  async calculateTotalRevenue() {
+    const result = await (this.client as PrismaClient).orderGroup.aggregate({
+      _sum: { totalAmount: true },
+      where: { paymentStatus: PaymentStatus.COMPLETED },
+    });
+    return Number(result._sum.totalAmount ?? 0);
+  }
+
+  async findOrdersForAdmin(queryInput: any) {
+    const queryHelper = new PrismaQueryHelper(queryInput)
+      .paginate()
+      .applyFilter((q) => ({
+        ...(q.status && { status: q.status }),
+      }))
+      .sort();
+
+    const { prismaArgs, meta } = queryHelper.build();
+    const prismaOrder = (this.client as PrismaClient).order;
+
+    const [orders, total] = await Promise.all([
+      prismaOrder.findMany({
+        ...prismaArgs,
+        include: {
+          shop: { select: { id: true, name: true } },
+          orderGroup: { select: { userId: true, paymentStatus: true } },
+          orderItems: { include: { product: { select: { id: true, name: true } } } },
+        },
+        orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
+      }),
+      prismaOrder.count({ where: prismaArgs.where }),
+    ]);
+
+    return { orders, total, meta };
+  }
 }
