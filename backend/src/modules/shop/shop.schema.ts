@@ -26,7 +26,9 @@ export const shopSchema = {
       status: z.enum(OrderStatus),
     }),
     query: emptySchema,
-    params: commonRules.id,
+    params: z.object({
+      id: commonRules.id,
+    }),
   }),
 
   getShopOrders: z.object({

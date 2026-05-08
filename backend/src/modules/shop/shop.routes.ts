@@ -1,8 +1,8 @@
 import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
 import { upload } from '@/shared/middleware/upload.middleware';
 import { Router } from 'express';
-import { shopController } from './shop.controller';
 import { shopSchema } from './shop.schema';
+import { shopController } from './shop.module';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { catchAsync } from '@/shared/utils/catchAsync';
 

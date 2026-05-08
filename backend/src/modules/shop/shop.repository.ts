@@ -4,7 +4,7 @@ import { slugHelper } from '@/shared/utils/slug';
 import { Prisma, Shop, ShopStatus } from '@prisma/client';
 import { RegisterShopInput } from './shop.type';
 
-class ShopRepository extends BaseRepository<
+export class ShopRepository extends BaseRepository<
   Shop,
   Prisma.ShopCreateInput | Prisma.ShopUncheckedCreateInput,
   Prisma.ShopUpdateInput,
@@ -28,10 +28,7 @@ class ShopRepository extends BaseRepository<
   };
 
   async findShopByOwerId(ownerId: string) {
-    return this.findOne(
-      { ownerId, deletedAt: null },
-      { omit: { deletedAt: true, createdAt: true, updatedAt: true, logoPublicId: true } },
-    );
+    return this.findOne({ ownerId, deletedAt: null }, { select: this.shopSelect });
   }
 
   async createShop(userId: string, data: RegisterShopInput, logoUrl?: ImageType) {
@@ -45,47 +42,21 @@ class ShopRepository extends BaseRepository<
         description: data.description ?? '',
         status: ShopStatus.PENDING,
       },
-      {
-        omit: {
-          createdAt: true,
-          updatedAt: true,
-          deletedAt: true,
-          logoPublicId: true,
-        },
-      },
+      { select: this.shopSelect },
     );
   }
 
   async findShopBySlug(shopSlug: string) {
-    return this.findOne(
-      { slug: shopSlug },
-      {
-        select: this.shopSelect,
-      },
-    );
+    return this.findOne({ slug: shopSlug }, { select: this.shopSelect });
   }
 
   async updateMyShop(shopId: string, data: Prisma.ShopUpdateInput) {
-    return this.update(shopId, data, {
-      omit: {
-        deletedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        logoPublicId: true,
-      },
-    });
+    return this.update(shopId, data, { select: { ...this.shopSelect, logoPublicId: true } });
   }
 
   async findShopWithOwner(shopId: string) {
     return this.findById(shopId, {
-      include: {
-        owner: {
-          select: {
-            email: true,
-            fullName: true,
-          },
-        },
-      },
+      include: { owner: { select: { email: true, fullName: true } } },
     });
   }
 }

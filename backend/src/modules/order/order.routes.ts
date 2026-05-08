@@ -24,10 +24,5 @@ router.get(
 );
 
 router.use(restrictTo('SELLER'));
-router.patch(
-  '/:id',
-  validate(orderSchema.updateStatus),
-  catchAsync(orderController.updateOrderStatus),
-);
 
 export default router;

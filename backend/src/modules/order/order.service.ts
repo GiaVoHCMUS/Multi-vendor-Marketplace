@@ -11,6 +11,8 @@ import { RedisCartRepository } from '../cart/repositories/redis-cart.cache';
 import { ProductRepository } from '../products/repositories/product.repository';
 import { UserRepository } from '../user/user.repository';
 import { ProductCacheRepository } from '../products/repositories/product.cache';
+import { cacheService } from '@/shared/services/cache.service';
+import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 
 export class OrderService {
   private readonly cartRepo: RedisCartRepository;
@@ -163,9 +165,9 @@ export class OrderService {
    * Cập nhật trạng thái đơn hàng
    */
   async updateOrderStatus(
+    shopId: string,
     orderId: string,
     nextStatus: OrderStatus, // Trạng thái đơn hàng mà Seller muốn cập nhật
-    sellerId: string,
   ) {
     const order = await this.orderRepo.findOrderWithDetails(orderId);
 
@@ -174,7 +176,7 @@ export class OrderService {
     }
 
     // Kiểm tra quyền seller
-    if (order.shop.ownerId !== sellerId) {
+    if (order.shopId !== shopId) {
       throw new AppError(MESSAGE.ORDER.FORBIDDEN_UPDATE_STATUS, StatusCodes.FORBIDDEN);
     }
 
@@ -195,5 +197,32 @@ export class OrderService {
     }
 
     return await this.orderRepo.updateStatusTransaction(orderId, order, nextStatus);
+  }
+
+  async getShopOrders(shopId: string, queryInput: any) {
+    const { orders, total, meta } = await this.orderRepo.findShopOrders(shopId, queryInput);
+
+    if (!meta || meta.type !== 'offset') {
+      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
+    }
+
+    return {
+      data: orders,
+      meta: buildOffsetMeta({
+        totalItems: total,
+        page: meta.page,
+        limit: meta.limit,
+      }),
+    };
+  }
+
+  async getShopAnalytics(shopId: string) {
+    const cacheKey = CACHE_KEYS.SHOP.ANALYTICS(shopId);
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this.orderRepo.getShopAnalyticsStats(shopId),
+      CACHE_TTL.TINY,
+    );
   }
 }

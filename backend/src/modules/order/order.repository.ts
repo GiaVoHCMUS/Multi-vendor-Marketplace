@@ -330,4 +330,83 @@ export class OrderRepository extends BaseRepository<
       return updatedOrder;
     });
   }
+
+  /**
+   * Lấy danh sách đơn hàng cho một Shop (Dành cho Seller)
+   */
+  async findShopOrders(shopId: string, queryInput: any) {
+    const queryHelper = new PrismaQueryHelper(queryInput)
+      .paginate()
+      .applyFilter((q) => ({
+        shopId, // Bắt buộc lọc theo shopId
+        ...(q.status && { status: q.status }),
+        ...(q.fromDate &&
+          q.toDate && {
+            createdAt: {
+              gte: new Date(q.fromDate),
+              lte: new Date(q.toDate),
+            },
+          }),
+      }))
+      .sort()
+      // Định nghĩa luôn các trường cần select trả về cho Seller
+      .select({
+        id: true,
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        orderItems: {
+          include: {
+            product: { select: { id: true, name: true, slug: true } },
+          },
+        },
+        orderGroup: {
+          select: {
+            userId: true,
+            paymentStatus: true,
+            paymentMethod: true,
+            createdAt: true,
+          },
+        },
+      });
+
+    const { prismaArgs, meta } = queryHelper.build();
+    const prismaOrder = (this.client as PrismaClient).order;
+
+    const [orders, total] = await Promise.all([
+      prismaOrder.findMany({
+        ...prismaArgs,
+        orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
+      }),
+      prismaOrder.count({ where: prismaArgs.where }),
+    ]);
+
+    return { orders, total, meta };
+  }
+
+  /**
+   * Lấy số liệu thống kê cho Dashboard của Shop (Tổng đơn, Đơn hoàn thành, Doanh thu)
+   */
+  async getShopAnalyticsStats(shopId: string) {
+    const [totalOrders, deliveredOrders, revenue] = await Promise.all([
+      // 1. Tổng số đơn
+      this.count({ shopId }),
+
+      // 2. Số đơn đã giao
+      this.count({ shopId, status: OrderStatus.DELIVERED }),
+
+      // 3. Tổng doanh thu (Chỉ tính các đơn đã giao)
+      this.modelDelegate.aggregate({
+        where: { shopId, status: OrderStatus.DELIVERED },
+        _sum: { totalAmount: true },
+      }),
+    ]);
+
+    return {
+      totalOrders,
+      deliveredOrders,
+      // Handle trường hợp revenue._sum.totalAmount là null (khi chưa có đơn nào)
+      revenue: revenue._sum.totalAmount ? Number(revenue._sum.totalAmount) : 0,
+    };
+  }
 }

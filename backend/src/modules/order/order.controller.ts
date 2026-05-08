@@ -27,14 +27,4 @@ export class OrderController {
 
     successResponse(res, StatusCodes.OK, MESSAGE.ORDER.GET_DETAIL_SUCCESS, order);
   };
-
-  updateOrderStatus = async (req: Request, res: Response) => {
-    const order = await this.orderService.updateOrderStatus(
-      req.params.id as string,
-      req.body.status,
-      req.user!.id,
-    );
-    
-    successResponse(res, StatusCodes.OK, MESSAGE.ORDER.UPDATE_STATUS_SUCCESS, order);
-  };
 }

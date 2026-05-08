@@ -39,14 +39,4 @@ export const orderSchema = {
       id: commonRules.id,
     }),
   }),
-
-  updateStatus: z.object({
-    body: z.object({
-      status: z.enum(OrderStatus),
-    }),
-    query: emptySchema,
-    params: z.object({
-      id: commonRules.id,
-    }),
-  }),
 };
