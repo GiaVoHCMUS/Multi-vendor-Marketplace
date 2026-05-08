@@ -137,7 +137,7 @@ export class OrderService {
     const { orders, total, meta } = await this.orderRepo.findOrderList(userId, queryInput);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
+      throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -203,7 +203,7 @@ export class OrderService {
     const { orders, total, meta } = await this.orderRepo.findShopOrders(shopId, queryInput);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
+      throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, StatusCodes.BAD_REQUEST);
     }
 
     return {

@@ -116,7 +116,7 @@ describe('productService', () => {
       });
 
       const promise = productService.getAll(queryInput);
-      await expect(promise).rejects.toThrow('Phân trang không hợp lệ');
+      await expect(promise).rejects.toThrow(MESSAGE.COMMON.INVALID_PAGINATION);
       await expect(promise).rejects.toBeInstanceOf(AppError);
     });
   });

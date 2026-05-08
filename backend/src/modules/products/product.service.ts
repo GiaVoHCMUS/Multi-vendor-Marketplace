@@ -112,7 +112,7 @@ export const productService = {
         }));
 
         if (!meta || meta.type !== 'cursor') {
-          throw new AppError('Phân trang không hợp lệ', 400);
+          throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, 400);
         }
 
         // Meta

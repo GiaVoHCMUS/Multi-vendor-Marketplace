@@ -29,8 +29,7 @@ export const MESSAGE = {
     CHANGE_PASSWORD_SUCCESS: 'Thay đổi mật khẩu thành công',
     NOT_FOUND_EMAIL: 'Email không tồn tại',
     INVALID_OR_EXPIRED_TOKEN: 'Token không đúng hoặc đã hết hạn',
-    VERIFY_EMAIL_SUCCESS:
-      'Xác thực email thành công. Bạn có thể đăng nhập ngay bây giờ',
+    VERIFY_EMAIL_SUCCESS: 'Xác thực email thành công. Bạn có thể đăng nhập ngay bây giờ',
   },
 
   SHOP: {
@@ -98,8 +97,7 @@ export const MESSAGE = {
     INVALID_PRODUCTS: 'Một số sản phẩm không hợp lệ',
     INSUFFICIENT_STOCK: 'Sản phẩm không đủ tồn kho',
     NOT_FOUND: 'Đơn hàng không tồn tại',
-    FORBIDDEN_UPDATE_STATUS:
-      'Bạn không có quyền thay đổi trạng thái đơn hàng này',
+    FORBIDDEN_UPDATE_STATUS: 'Bạn không có quyền thay đổi trạng thái đơn hàng này',
     ALREADY_PAID_OR_INVALID: 'Đơn hàng đã thanh toán hoặc không hợp lệ',
   },
 
@@ -112,5 +110,6 @@ export const MESSAGE = {
     INTERNAL_ERROR: 'Đã xảy ra lỗi hệ thống',
     UNAUTHORIZED: 'Bạn chưa đăng nhập',
     FORBIDDEN: 'Bạn không có quyền thực hiện hành động này',
+    INVALID_PAGINATION: 'Phân trang không hợp lệ',
   },
 };

@@ -89,7 +89,7 @@ export class AdminService {
     const { shops, total, meta } = await this.shopRepo.findPendingShops(queryInput);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
+      throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -106,7 +106,7 @@ export class AdminService {
     const { users, total, meta } = await this.userRepo.findUsersForAdmin(queryInput);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
+      throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, StatusCodes.BAD_REQUEST);
     }
 
     return {
@@ -123,7 +123,7 @@ export class AdminService {
     const { orders, total, meta } = await this.orderRepo.findOrdersForAdmin(queryInput);
 
     if (!meta || meta.type !== 'offset') {
-      throw new AppError('Phân trang không hợp lệ', StatusCodes.BAD_REQUEST);
+      throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, StatusCodes.BAD_REQUEST);
     }
 
     return {
