@@ -1,6 +1,6 @@
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { BaseRepository } from '@/shared/repositories/base.repository';
-import { User, Prisma, PrismaClient } from '@prisma/client';
+import { User, Prisma, PrismaClient, UserRole } from '@prisma/client';
 
 export class UserRepository extends BaseRepository<
   User,
@@ -99,6 +99,10 @@ export class UserRepository extends BaseRepository<
     ]);
 
     return { users, total, meta };
+  }
+
+  async updateRole(userId: string, role: UserRole) {
+    return this.update(userId, { role });
   }
 }
 

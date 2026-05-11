@@ -1,7 +1,7 @@
 import { BaseRepository } from '@/shared/repositories/base.repository';
 import { ImageType } from '@/shared/types/image.type';
 import { slugHelper } from '@/shared/utils/slug';
-import { Prisma, PrismaClient, Shop, ShopStatus, UserRole } from '@prisma/client';
+import { Prisma, PrismaClient, Shop, ShopStatus } from '@prisma/client';
 import { RegisterShopInput } from './shop.type';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 
@@ -68,24 +68,6 @@ export class ShopRepository extends BaseRepository<
     return (await this.findById(shopId, {
       include: { owner: { select: { email: true, fullName: true } } },
     })) as ShopWithOwner | null;
-  }
-
-  async approveShopTransaction(shopId: string, ownerId: string) {
-    const prismaClient = this.client as PrismaClient;
-
-    return await prismaClient.$transaction(async (tx) => {
-      const updated = await tx.shop.update({
-        where: { id: shopId },
-        data: { status: ShopStatus.ACTIVE },
-      });
-
-      await tx.user.update({
-        where: { id: ownerId },
-        data: { role: UserRole.SELLER },
-      });
-
-      return updated;
-    });
   }
 
   async updateShopStatus(shopId: string, status: ShopStatus) {
