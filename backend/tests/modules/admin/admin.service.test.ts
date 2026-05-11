@@ -2,7 +2,7 @@ import { mailJob } from '@/jobs/mail/mail.job';
 import { AdminService } from '@/modules/admin/admin.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { AppError } from '@/shared/utils/AppError';
-import { ShopStatus } from '@prisma/client';
+import { ShopStatus, UserRole } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
 jest.mock('@/jobs/mail/mail.job', () => ({
@@ -24,6 +24,7 @@ describe('AdminService', () => {
   let mockShopRepo: any;
   let mockUserRepo: any;
   let mockOrderRepo: any;
+  let mockTxManager: any;
 
   beforeEach(() => {
     mockShopRepo = {
@@ -32,6 +33,7 @@ describe('AdminService', () => {
       updateShopStatus: jest.fn(),
       countActiveShops: jest.fn(),
       findPendingShops: jest.fn(),
+      useTransaction: jest.fn().mockReturnThis(),
     };
 
     mockUserRepo = {
@@ -39,6 +41,8 @@ describe('AdminService', () => {
       softDeleteUser: jest.fn(),
       countActiveUsers: jest.fn(),
       findUsersForAdmin: jest.fn(),
+      useTransaction: jest.fn().mockReturnThis(),
+      updateRole: jest.fn(),
     };
 
     mockOrderRepo = {
@@ -47,7 +51,11 @@ describe('AdminService', () => {
       findOrdersForAdmin: jest.fn(),
     };
 
-    adminService = new AdminService(mockShopRepo, mockUserRepo, mockOrderRepo);
+    mockTxManager = {
+      run: jest.fn().mockImplementation(async (fn) => await fn('fake-prisma-transaction-client')),
+    };
+
+    adminService = new AdminService(mockShopRepo, mockUserRepo, mockOrderRepo, mockTxManager);
   });
 
   describe('approveShop', () => {
@@ -88,22 +96,28 @@ describe('AdminService', () => {
 
     it('should approve shop successfully, update db and send email', async () => {
       mockShopRepo.findShopWithOwner.mockResolvedValue(mockShop);
-      mockShopRepo.approveShopTransaction.mockResolvedValue({
+      mockShopRepo.updateShopStatus.mockResolvedValue({
         ...mockShop,
         status: ShopStatus.ACTIVE,
       });
 
       const result = await adminService.approveShop(mockShopId);
 
-      expect(mockShopRepo.approveShopTransaction).toHaveBeenCalledWith(
-        mockShopId,
-        mockShop.ownerId,
-      );
+      expect(mockTxManager.run).toHaveBeenCalled();
+      expect(mockShopRepo.useTransaction).toHaveBeenCalledWith('fake-prisma-transaction-client');
+      expect(mockUserRepo.useTransaction).toHaveBeenCalledWith('fake-prisma-transaction-client');
+
+      // Kiểm tra các hàm update được gọi với đúng data
+      expect(mockShopRepo.updateShopStatus).toHaveBeenCalledWith(mockShopId, ShopStatus.ACTIVE);
+      expect(mockUserRepo.updateRole).toHaveBeenCalledWith(mockShop.ownerId, UserRole.SELLER);
+
+      // Kiểm tra gửi mail
       expect(mailJob.sendShopApproval).toHaveBeenCalledWith({
         to: mockShop.owner.email,
         ownerName: mockShop.owner.fullName,
         shopName: mockShop.name,
       });
+
       expect(result.status).toBe(ShopStatus.ACTIVE);
     });
   });

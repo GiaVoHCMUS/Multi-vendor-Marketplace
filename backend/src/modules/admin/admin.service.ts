@@ -2,7 +2,7 @@ import { AppError } from '@/shared/utils/AppError';
 import { PaginationQuery } from './admin.type';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { MESSAGE } from '@/shared/constants/message.constants';
-import { ShopStatus } from '@prisma/client';
+import { ShopStatus, UserRole } from '@prisma/client';
 import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
@@ -10,12 +10,14 @@ import { StatusCodes } from 'http-status-codes';
 import { ShopRepository } from '../shop/shop.repository';
 import { UserRepository } from '../user/user.repository';
 import { OrderRepository } from '../order/order.repository';
+import { TransactionManger } from '@/shared/database/transaction-manager';
 
 export class AdminService {
   constructor(
     private readonly shopRepo: ShopRepository,
     private readonly userRepo: UserRepository,
     private readonly orderRepo: OrderRepository,
+    private readonly txManager: TransactionManger,
   ) {}
 
   async approveShop(shopId: string) {
@@ -29,7 +31,15 @@ export class AdminService {
       throw new AppError(MESSAGE.ADMIN.SHOP_ALREADY_APPROVED, StatusCodes.BAD_REQUEST);
     }
 
-    const updatedShop = await this.shopRepo.approveShopTransaction(shopId, shop.ownerId);
+    const updatedShop = await this.txManager.run(async (tx) => {
+      const updated = await this.shopRepo
+        .useTransaction(tx)
+        .updateShopStatus(shopId, ShopStatus.ACTIVE);
+
+      await this.userRepo.useTransaction(tx).updateRole(shop.ownerId, UserRole.SELLER);
+
+      return updated;
+    });
 
     await mailJob.sendShopApproval({
       to: shop.owner.email,
