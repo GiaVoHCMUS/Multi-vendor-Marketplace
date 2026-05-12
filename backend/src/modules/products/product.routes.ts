@@ -1,15 +1,12 @@
 import { upload } from '@/shared/middleware/upload.middleware';
 import { Router } from 'express';
 import { productSchema } from './product.schema';
-import { productController } from './product.controller';
+import { productController } from './product.module';
 import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { validateProductImages } from '@/shared/middleware/validateImage.middlware';
 import { rateLimitMiddlware } from '@/shared/middleware/limiter.middlware';
-import {
-  managementLimiter,
-  publicLimiter,
-} from '@/core/limiter/limiter.config';
+import { managementLimiter, publicLimiter } from '@/core/limiter/limiter.config';
 import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
@@ -20,11 +17,7 @@ router.get(
   validate(productSchema.getAll),
   catchAsync(productController.getAll),
 );
-router.get(
-  '/:slug',
-  rateLimitMiddlware(publicLimiter),
-  catchAsync(productController.getBySlug),
-);
+router.get('/:slug', rateLimitMiddlware(publicLimiter), catchAsync(productController.getBySlug));
 
 router.use(protect);
 router.use(restrictTo('SELLER'));
@@ -43,10 +36,6 @@ router.patch(
   validate(productSchema.update),
   catchAsync(productController.update),
 );
-router.delete(
-  '/:id',
-  validate(productSchema.delete),
-  catchAsync(productController.delete),
-);
+router.delete('/:id', validate(productSchema.delete), catchAsync(productController.delete));
 
 export default router;

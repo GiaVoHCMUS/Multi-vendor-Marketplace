@@ -1,7 +1,4 @@
-import { categoryRepository } from '@/modules/category/category.repository';
-import { productRepository } from '@/modules/products/repositories/product.repository';
-import { productService } from '@/modules/products/product.service';
-import { shopRepository } from '@/modules/shop/shop.repository';
+import { ProductService } from '@/modules/products/product.service';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { cacheService } from '@/shared/services/cache.service';
@@ -26,30 +23,30 @@ jest.mock('@/shared/utils/slug', () => ({
   },
 }));
 
-jest.mock('@/modules/category/category.repository', () => ({
-  categoryRepository: {
-    getBySlug: jest.fn(),
-    findById: jest.fn(),
-  },
-}));
+// jest.mock('@/modules/category/category.repository', () => ({
+//   categoryRepository: {
+//     getBySlug: jest.fn(),
+//     findById: jest.fn(),
+//   },
+// }));
 
-jest.mock('@/modules/shop/shop.repository', () => ({
-  shopRepository: {
-    findShopBySlug: jest.fn(),
-    findShopByOwerId: jest.fn(),
-  },
-}));
+// jest.mock('@/modules/shop/shop.repository', () => ({
+//   shopRepository: {
+//     findShopBySlug: jest.fn(),
+//     findShopByOwerId: jest.fn(),
+//   },
+// }));
 
-jest.mock('@/modules/products/repositories/product.repository', () => ({
-  productRepository: {
-    findProductList: jest.fn(),
-    findProductBySlug: jest.fn(),
-    createProduct: jest.fn(),
-    updateProduct: jest.fn(),
-    findProductById: jest.fn(),
-    delete: jest.fn(),
-  },
-}));
+// jest.mock('@/modules/products/repositories/product.repository', () => ({
+//   productRepository: {
+//     findProductList: jest.fn(),
+//     findProductBySlug: jest.fn(),
+//     createProduct: jest.fn(),
+//     updateProduct: jest.fn(),
+//     findProductById: jest.fn(),
+//     delete: jest.fn(),
+//   },
+// }));
 
 jest.mock('@/shared/utils/cursor', () => ({
   cursorUtil: {
@@ -58,6 +55,11 @@ jest.mock('@/shared/utils/cursor', () => ({
 }));
 
 describe('productService', () => {
+  let mockProductRepo: any;
+  let mockCategoryRepo: any;
+  let mockShopRepo: any;
+  let productService: ProductService;
+
   const userId = 'user-123';
   const productId = 'prod-123';
   const shopId = 'shop-123';
@@ -75,11 +77,34 @@ describe('productService', () => {
     status: ProductStatus.PUBLISHED,
   };
 
+  beforeEach(() => {
+    mockProductRepo = {
+      findProductList: jest.fn(),
+      findProductBySlug: jest.fn(),
+      createProduct: jest.fn(),
+      updateProduct: jest.fn(),
+      findProductById: jest.fn(),
+      delete: jest.fn(),
+    };
+
+    mockCategoryRepo = {
+      getBySlug: jest.fn(),
+      findById: jest.fn(),
+    };
+
+    mockShopRepo = {
+      findShopBySlug: jest.fn(),
+      findShopByOwerId: jest.fn(),
+    };
+
+    productService = new ProductService(mockProductRepo, mockCategoryRepo, mockShopRepo);
+  });
+
   describe('getAll()', () => {
     const queryInput = { limit: 10, search: 'test' };
 
     it('should return empty data if categorySlug or shopSlug is provided but not found', async () => {
-      (categoryRepository.getBySlug as jest.Mock).mockResolvedValue(null);
+      mockCategoryRepo.getBySlug.mockResolvedValue(null);
 
       const result = await productService.getAll({
         ...queryInput,
@@ -90,7 +115,7 @@ describe('productService', () => {
       expect(result.meta.limit).toBe(queryInput.limit);
       expect(result.meta.nextCursor).toBeNull();
       expect(cacheService.getTracker).not.toHaveBeenCalled();
-      expect(productRepository.findProductList).not.toHaveBeenCalled();
+      expect(mockProductRepo.findProductList).not.toHaveBeenCalled();
     });
 
     it('should return product list and meta correctly', async () => {
@@ -99,18 +124,18 @@ describe('productService', () => {
         meta: { type: 'cursor' },
       };
 
-      (productRepository.findProductList as jest.Mock).mockResolvedValue(mockRepoResult);
+      mockProductRepo.findProductList.mockResolvedValue(mockRepoResult);
       (cursorUtil.encode as jest.Mock).mockReturnValue('next-cursor-token');
 
       const result = await productService.getAll(queryInput);
 
       expect(result.data).toHaveLength(2);
       expect(result.data[0].image).toBe(image);
-      expect(productRepository.findProductList).toHaveBeenCalledWith(queryInput, {});
+      expect(mockProductRepo.findProductList).toHaveBeenCalledWith(queryInput, {});
     });
 
     it('should throw error if pagination meta type is not cursor', async () => {
-      (productRepository.findProductList as jest.Mock).mockResolvedValue({
+      mockProductRepo.findProductList.mockResolvedValue({
         products: [],
         meta: { type: 'offset' },
       });
@@ -123,7 +148,7 @@ describe('productService', () => {
 
   describe('getBySlug()', () => {
     it('should throw error if product not found', async () => {
-      (productRepository.findProductBySlug as jest.Mock).mockResolvedValue(null);
+      mockProductRepo.findProductBySlug.mockResolvedValue(null);
 
       const promise = productService.getBySlug('unknown');
 
@@ -135,7 +160,7 @@ describe('productService', () => {
     });
 
     it('should return product if found', async () => {
-      (productRepository.findProductBySlug as jest.Mock).mockResolvedValue(product);
+      mockProductRepo.findProductBySlug.mockResolvedValue(product);
 
       const result = await productService.getBySlug('test-product');
 
@@ -162,7 +187,7 @@ describe('productService', () => {
     };
 
     it('should throw error if shop not found', async () => {
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue(null);
+      mockShopRepo.findShopByOwerId.mockResolvedValue(null);
 
       const promise = productService.create(userId, createInput, mockImages);
 
@@ -172,12 +197,12 @@ describe('productService', () => {
         statusCode: StatusCodes.NOT_FOUND,
       });
 
-      expect(categoryRepository.findById).not.toHaveBeenCalled();
+      expect(mockCategoryRepo.findById).not.toHaveBeenCalled();
     });
 
     it('should throw error if shop is not active', async () => {
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue(mockShop);
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue({
+      mockShopRepo.findShopByOwerId.mockResolvedValue(mockShop);
+      mockShopRepo.findShopByOwerId.mockResolvedValue({
         status: ShopStatus.PENDING,
       });
 
@@ -188,15 +213,15 @@ describe('productService', () => {
         statusCode: StatusCodes.FORBIDDEN,
       });
 
-      expect(categoryRepository.findById).not.toHaveBeenCalled();
+      expect(mockCategoryRepo.findById).not.toHaveBeenCalled();
     });
 
     it('should throw error if category not found', async () => {
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue(mockShop);
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue({
+      mockShopRepo.findShopByOwerId.mockResolvedValue(mockShop);
+      mockShopRepo.findShopByOwerId.mockResolvedValue({
         status: ShopStatus.ACTIVE,
       });
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(null);
+      mockCategoryRepo.findById.mockResolvedValue(null);
 
       const promise = productService.create(userId, createInput, mockImages);
       await expect(promise).rejects.toThrow(AppError);
@@ -205,24 +230,24 @@ describe('productService', () => {
         statusCode: StatusCodes.NOT_FOUND,
       });
 
-      expect(productRepository.createProduct).not.toHaveBeenCalled();
+      expect(mockProductRepo.createProduct).not.toHaveBeenCalled();
     });
 
     it('should create product and invalidate cache successfully', async () => {
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue(mockShop);
-      (shopRepository.findShopByOwerId as jest.Mock).mockResolvedValue({
+      mockShopRepo.findShopByOwerId.mockResolvedValue(mockShop);
+      mockShopRepo.findShopByOwerId.mockResolvedValue({
         status: ShopStatus.ACTIVE,
       });
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(categoryId);
+      mockCategoryRepo.findById.mockResolvedValue(categoryId);
       (slugHelper.generate as jest.Mock).mockReturnValue('new-product');
-      (productRepository.createProduct as jest.Mock).mockResolvedValue(product);
+      mockProductRepo.createProduct.mockResolvedValue(product);
 
       const spy = jest.spyOn(productService, 'invalidateProductList');
 
       const result = await productService.create(userId, createInput, mockImages);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(productRepository.createProduct).toHaveBeenCalled();
+      expect(mockProductRepo.createProduct).toHaveBeenCalled();
       expect(result).toEqual(product);
     });
   });
@@ -231,7 +256,7 @@ describe('productService', () => {
     const updateInput = { name: 'Updated Name' };
 
     it('should throw error if product not found', async () => {
-      (productRepository.findProductById as jest.Mock).mockResolvedValue(null);
+      mockProductRepo.findProductById.mockResolvedValue(null);
 
       const spy = jest.spyOn(productService, 'invalidateProductList');
 
@@ -247,8 +272,8 @@ describe('productService', () => {
     });
 
     it('should update product and clear cache successfully', async () => {
-      (productRepository.findProductById as jest.Mock).mockResolvedValue(product);
-      (productRepository.updateProduct as jest.Mock).mockResolvedValue({
+      mockProductRepo.findProductById.mockResolvedValue(product);
+      mockProductRepo.updateProduct.mockResolvedValue({
         ...product,
         name: 'Updated Name',
       });
@@ -256,7 +281,7 @@ describe('productService', () => {
 
       const result = await productService.update(productId, updateInput);
 
-      expect(productRepository.updateProduct).toHaveBeenCalledWith(productId, expect.any(Object));
+      expect(mockProductRepo.updateProduct).toHaveBeenCalledWith(productId, expect.any(Object));
       expect(cacheService.delete).toHaveBeenCalledWith(CACHE_KEYS.PRODUCT.SLUG(product.slug));
       expect(result.name).toBe('Updated Name');
       expect(spy).toHaveBeenCalledTimes(1);
@@ -264,8 +289,8 @@ describe('productService', () => {
 
     it('should update product, images and clear cache successfully', async () => {
       const mockImages = [{ url: image, publicId: '1' }];
-      (productRepository.findProductById as jest.Mock).mockResolvedValue(product);
-      (productRepository.updateProduct as jest.Mock).mockResolvedValue({
+      mockProductRepo.findProductById.mockResolvedValue(product);
+      mockProductRepo.updateProduct.mockResolvedValue({
         ...product,
         name: 'Updated Name',
       });
@@ -273,7 +298,7 @@ describe('productService', () => {
 
       const result = await productService.update(productId, updateInput, mockImages);
 
-      expect(productRepository.updateProduct).toHaveBeenCalledWith(productId, expect.any(Object));
+      expect(mockProductRepo.updateProduct).toHaveBeenCalledWith(productId, expect.any(Object));
       expect(cacheService.delete).toHaveBeenCalledWith(CACHE_KEYS.PRODUCT.SLUG(product.slug));
       expect(result.name).toBe('Updated Name');
       expect(spy).toHaveBeenCalledTimes(1);
@@ -282,7 +307,7 @@ describe('productService', () => {
 
   describe('delete()', () => {
     it('should throw error if product not found', async () => {
-      (productRepository.findProductById as jest.Mock).mockResolvedValue(null);
+      mockProductRepo.findProductById.mockResolvedValue(null);
       const spy = jest.spyOn(productService, 'invalidateProductList');
 
       const promise = productService.delete(productId);
@@ -293,20 +318,20 @@ describe('productService', () => {
         message: MESSAGE.PRODUCT.NOT_FOUND,
       });
 
-      expect(productRepository.delete).not.toHaveBeenCalled();
+      expect(mockProductRepo.delete).not.toHaveBeenCalled();
       expect(cacheService.delete).not.toHaveBeenCalled();
       expect(spy).not.toHaveBeenCalled();
     });
 
     it('should delete product and clear cache successfully', async () => {
-      (productRepository.findProductById as jest.Mock).mockResolvedValue(product);
-      (productRepository.delete as jest.Mock).mockResolvedValue(product);
+      (mockProductRepo.findProductById as jest.Mock).mockResolvedValue(product);
+      (mockProductRepo.delete as jest.Mock).mockResolvedValue(product);
 
       const spy = jest.spyOn(productService, 'invalidateProductList');
 
       await productService.delete(productId);
 
-      expect(productRepository.delete).toHaveBeenCalledWith(productId);
+      expect(mockProductRepo.delete).toHaveBeenCalledWith(productId);
       expect(cacheService.delete).toHaveBeenCalled();
 
       expect(spy).toHaveBeenCalledTimes(1);

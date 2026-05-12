@@ -179,5 +179,3 @@ export class ProductRepository extends BaseRepository<
     return this.update(productId, { stock: { increment: quantity } });
   }
 }
-
-export const productRepository = new ProductRepository();

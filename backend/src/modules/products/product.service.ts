@@ -8,16 +8,21 @@ import { slugHelper } from '@/shared/utils/slug';
 import { sortObject } from '@/shared/utils/sortObject';
 import { Prisma, ShopStatus } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
-import { categoryRepository } from '../category/category.repository';
-import { shopRepository } from '../shop/shop.repository';
-import { productRepository } from './repositories/product.repository';
+import { CategoryRepository } from '../category/category.repository';
+import { ShopRepository } from '../shop/shop.repository';
+import { ProductRepository } from './repositories/product.repository';
 import { CreateProductInput, GetProductsQuery, UpdateProductInput } from './product.type';
 
-export const productService = {
+export class ProductService {
+  constructor(
+    private readonly productRepo: ProductRepository,
+    private readonly categoryRepo: CategoryRepository,
+    private readonly shopRepo: ShopRepository,
+  ) {}
   async invalidateProductList() {
     // Tăng version -> Mọi query list sau đó sẽ bị cache miss và lấy data mới từ DB
     await cacheService.invalidateTracker(CACHE_KEYS.PRODUCT.TRACKER_LIST);
-  },
+  }
 
   async getAll(queryInput: GetProductsQuery) {
     const { limit, categorySlug, shopSlug, search, minPrice, maxPrice, sort } = queryInput;
@@ -26,7 +31,7 @@ export const productService = {
       categorySlug
         ? cacheService.getOrSet(
             CACHE_KEYS.CATEGORY.ID_BY_SLUG(categorySlug),
-            () => categoryRepository.getBySlug(categorySlug),
+            () => this.categoryRepo.getBySlug(categorySlug),
             CACHE_TTL.LONG,
           )
         : null,
@@ -34,7 +39,7 @@ export const productService = {
       shopSlug
         ? cacheService.getOrSet(
             CACHE_KEYS.SHOP.ID_BY_SLUG(shopSlug),
-            () => shopRepository.findShopBySlug(shopSlug),
+            () => this.shopRepo.findShopBySlug(shopSlug),
             CACHE_TTL.LONG,
           )
         : null,
@@ -69,10 +74,7 @@ export const productService = {
         const shopId = shop ? shop.id : undefined;
         const extraFilters = { categoryId, shopId };
 
-        const { products, meta } = await productRepository.findProductList(
-          queryInput,
-          extraFilters,
-        );
+        const { products, meta } = await this.productRepo.findProductList(queryInput, extraFilters);
 
         // Pagination logic
         const hasNext = products.length > limit;
@@ -135,13 +137,13 @@ export const productService = {
       },
       CACHE_TTL.SHORT,
     );
-  },
+  }
 
-  getBySlug: async (slug: string) => {
+  async getBySlug(slug: string) {
     return cacheService.getOrSet(
       CACHE_KEYS.PRODUCT.SLUG(slug),
       async () => {
-        const product = await productRepository.findProductBySlug(slug);
+        const product = await this.productRepo.findProductBySlug(slug);
 
         if (!product) {
           throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -151,10 +153,10 @@ export const productService = {
       },
       CACHE_TTL.LONG,
     );
-  },
+  }
 
   async create(userId: string, data: CreateProductInput, images: ImageType[]) {
-    const shop = await shopRepository.findShopByOwerId(userId);
+    const shop = await this.shopRepo.findShopByOwerId(userId);
 
     if (!shop) {
       throw new AppError(MESSAGE.SHOP.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -164,7 +166,7 @@ export const productService = {
       throw new AppError(MESSAGE.SHOP.NOT_ACTIVE, StatusCodes.FORBIDDEN);
     }
 
-    const category = await categoryRepository.findById(data.categoryId);
+    const category = await this.categoryRepo.findById(data.categoryId);
 
     if (!category) {
       throw new AppError(MESSAGE.CATEGORY.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -194,11 +196,11 @@ export const productService = {
 
     await this.invalidateProductList();
 
-    return productRepository.createProduct(createData);
-  },
+    return this.productRepo.createProduct(createData);
+  }
 
   async update(id: string, data: UpdateProductInput, images?: ImageType[]) {
-    const product = await productRepository.findProductById(id);
+    const product = await this.productRepo.findProductById(id);
 
     if (!product) {
       throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -220,7 +222,7 @@ export const productService = {
       }),
     };
 
-    const updatedProduct = await productRepository.updateProduct(id, updateData);
+    const updatedProduct = await this.productRepo.updateProduct(id, updateData);
 
     await Promise.all([
       this.invalidateProductList(),
@@ -228,20 +230,20 @@ export const productService = {
     ]);
 
     return updatedProduct;
-  },
+  }
 
   async delete(id: string) {
-    const product = await productRepository.findProductById(id);
+    const product = await this.productRepo.findProductById(id);
 
     if (!product) {
       throw new AppError(MESSAGE.PRODUCT.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    await productRepository.delete(id);
+    await this.productRepo.delete(id);
 
     await Promise.all([
       this.invalidateProductList(),
       cacheService.delete(CACHE_KEYS.PRODUCT.SLUG(product.slug)),
     ]);
-  },
-};
+  }
+}

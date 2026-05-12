@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { productService } from './product.service';
+import { ProductService } from './product.service';
 import { successResponse } from '@/shared/utils/response';
 import { ImageType } from '@/shared/types/image.type';
 import { imageService } from '@/shared/services/image.service';
@@ -7,10 +7,12 @@ import { productSchema } from './product.schema';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 
-export const productController = {
-  getAll: async (req: Request, res: Response) => {
+export class ProductController {
+  constructor(private readonly productService: ProductService) {}
+
+  getAll = async (req: Request, res: Response) => {
     const { query } = productSchema.getAll.parse(req);
-    const result = await productService.getAll(query);
+    const result = await this.productService.getAll(query);
 
     successResponse(
       res,
@@ -19,20 +21,15 @@ export const productController = {
       result.data,
       result.meta,
     );
-  },
+  };
 
-  getBySlug: async (req: Request, res: Response) => {
-    const product = await productService.getBySlug(req.params.slug as string);
+  getBySlug = async (req: Request, res: Response) => {
+    const product = await this.productService.getBySlug(req.params.slug as string);
 
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.PRODUCT.GET_DETAIL_SUCCESS,
-      product,
-    );
-  },
+    successResponse(res, StatusCodes.OK, MESSAGE.PRODUCT.GET_DETAIL_SUCCESS, product);
+  };
 
-  create: async (req: Request, res: Response) => {
+  create = async (req: Request, res: Response) => {
     let images: ImageType[] = [];
 
     if (req.files) {
@@ -41,17 +38,12 @@ export const productController = {
       images = await imageService.uploadMultiple(files, 'product_images');
     }
 
-    const product = await productService.create(req.user!.id, req.body, images);
+    const product = await this.productService.create(req.user!.id, req.body, images);
 
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.PRODUCT.CREATED_SUCCESS,
-      product,
-    );
-  },
+    successResponse(res, StatusCodes.OK, MESSAGE.PRODUCT.CREATED_SUCCESS, product);
+  };
 
-  update: async (req: Request, res: Response) => {
+  update = async (req: Request, res: Response) => {
     let images: ImageType[] | undefined;
 
     if (req.files) {
@@ -60,23 +52,14 @@ export const productController = {
       images = await imageService.uploadMultiple(files, 'product_images');
     }
 
-    const product = await productService.update(
-      req.params.id as string,
-      req.body,
-      images,
-    );
+    const product = await this.productService.update(req.params.id as string, req.body, images);
 
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.PRODUCT.UPDATED_SUCCESS,
-      product,
-    );
-  },
+    successResponse(res, StatusCodes.OK, MESSAGE.PRODUCT.UPDATED_SUCCESS, product);
+  };
 
-  delete: async (req: Request, res: Response) => {
-    await productService.delete(req.params.id as string);
+  delete = async (req: Request, res: Response) => {
+    await this.productService.delete(req.params.id as string);
 
     successResponse(res, StatusCodes.OK, MESSAGE.PRODUCT.DELETED_SUCCESS);
-  },
-};
+  };
+}
