@@ -103,6 +103,13 @@ export class ShopRepository extends BaseRepository<
 
     return { shops, total, meta };
   }
+
+  /**
+   * Cộng thêm tiền vào số dư của Shop sau khi hoàn tất đơn hàng
+   */
+  async incrementBalance(shopId: string, amount: number) {
+    return this.update(shopId, { balance: { increment: amount } });
+  }
 }
 
 export const shopRepository = new ShopRepository();

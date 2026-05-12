@@ -165,9 +165,18 @@ export class ProductRepository extends BaseRepository<
   }
 
   async updateProduct(id: string, data: Prisma.ProductUpdateInput) {
-    return this.update(id, data, {
-      select: this.productSelect,
-    });
+    return this.update(id, data, { select: this.productSelect });
+  }
+
+  async decrementStock(productId: string, quantity: number) {
+    return this.update(productId, { stock: { decrement: quantity } });
+  }
+
+  /**
+   * Hoàn lại số lượng tồn kho cho sản phẩm (thường dùng khi hủy đơn)
+   */
+  async incrementStock(productId: string, quantity: number) {
+    return this.update(productId, { stock: { increment: quantity } });
   }
 }
 
