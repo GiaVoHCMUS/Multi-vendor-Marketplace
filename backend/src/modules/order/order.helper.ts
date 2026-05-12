@@ -6,7 +6,6 @@ import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
  * Hàm này luôn sử dụng khi có một order là con của orderGroup mà trở thành DELIVERED
  * Chỉ áp dụng cho phương thức thanh toán COD
  */
-
 export const checkAndCompleteOrderGroup = async (
   tx: Prisma.TransactionClient,
   orderGroupId: string,

@@ -9,15 +9,15 @@ import { mailJob } from '@/jobs/mail/mail.job';
 import { StatusCodes } from 'http-status-codes';
 import { ShopRepository } from '../shop/shop.repository';
 import { UserRepository } from '../user/user.repository';
-import { OrderRepository } from '../order/order.repository';
-import { TransactionManger } from '@/shared/database/transaction-manager';
+import { OrderRepository } from '../order/repositories/order.repository';
+import { TransactionManager } from '@/core/database/transaction-manager';
 
 export class AdminService {
   constructor(
     private readonly shopRepo: ShopRepository,
     private readonly userRepo: UserRepository,
     private readonly orderRepo: OrderRepository,
-    private readonly txManager: TransactionManger,
+    private readonly txManager: TransactionManager,
   ) {}
 
   async approveShop(shopId: string) {

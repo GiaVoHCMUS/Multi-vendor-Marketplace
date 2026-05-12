@@ -1,41 +1,46 @@
 import { CheckoutInput } from './order.type';
 import { AppError } from '@/shared/utils/AppError';
-import { OrderStatus, PaymentMethod } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  PayoutStatus,
+  TransactionType,
+} from '@prisma/client';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { paymentService } from '../payment/payment.service';
 import { StatusCodes } from 'http-status-codes';
-import { OrderRepository } from './order.repository';
+import { OrderRepository } from './repositories/order.repository';
 import { RedisCartRepository } from '../cart/repositories/redis-cart.cache';
 import { ProductRepository } from '../products/repositories/product.repository';
 import { UserRepository } from '../user/user.repository';
 import { ProductCacheRepository } from '../products/repositories/product.cache';
 import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
+import { TransactionManager } from '@/core/database/transaction-manager';
+import { OrderGroupRepository } from './repositories/order-group.repository';
+import { OrderItemRepository } from './repositories/order-item.repository';
+import { ShopRepository } from '../shop/shop.repository';
+import { TransactionRepository } from '../payment/repositories/transaction.repository';
+import { TransactionClient } from '@/core/database/db-type';
 
 export class OrderService {
-  private readonly cartRepo: RedisCartRepository;
-  private readonly productRepo: ProductRepository;
-  private readonly orderRepo: OrderRepository;
-  private readonly userRepo: UserRepository;
-  private readonly productCacheRepo: ProductCacheRepository;
-
   constructor(
-    cartRepo: RedisCartRepository,
-    productRepo: ProductRepository,
-    orderRepo: OrderRepository,
-    userRepo: UserRepository,
-    productCacheRepo: ProductCacheRepository,
-  ) {
-    this.cartRepo = cartRepo;
-    this.productRepo = productRepo;
-    this.orderRepo = orderRepo;
-    this.userRepo = userRepo;
-    this.productCacheRepo = productCacheRepo;
-  }
+    private readonly cartRepo: RedisCartRepository,
+    private readonly productRepo: ProductRepository,
+    private readonly orderRepo: OrderRepository,
+    private readonly userRepo: UserRepository,
+    private readonly productCacheRepo: ProductCacheRepository,
+    private readonly txManager: TransactionManager,
+    private readonly orderGroupRepo: OrderGroupRepository,
+    private readonly orderItemRepo: OrderItemRepository,
+    private readonly shopRepo: ShopRepository,
+    private readonly transactionRepo: TransactionRepository,
+  ) {}
 
-  async checkout(userId: string, ipAddr: string, data: CheckoutInput) {
+  checkout = async (userId: string, ipAddr: string, data: CheckoutInput) => {
     const user = await this.userRepo.getProfileById(userId);
 
     if (!user) {
@@ -95,12 +100,47 @@ export class OrderService {
       shopMap.get(shopId)!.push(item);
     }
 
-    const result = await this.orderRepo.createCheckoutTransaction(
-      userId,
-      totalAmount,
-      data,
-      shopMap,
-    );
+    const result = await this.txManager.run(async (tx) => {
+      // Chuyển tất cả Repo sang mode Transaction
+      const groupRepoTx = this.orderGroupRepo.useTransaction(tx);
+      const orderRepoTx = this.orderRepo.useTransaction(tx);
+      const itemRepoTx = this.orderItemRepo.useTransaction(tx);
+      const productRepoTx = this.productRepo.useTransaction(tx);
+
+      // 1. Lưu OrderGroup vào database
+      const orderGroup = await groupRepoTx.createOrderGroup({
+        userId,
+        totalAmount,
+        ...data,
+        paymentStatus: PaymentStatus.PENDING,
+      });
+
+      // 2. Chia các orderGroup đó thành các Order nhỏ hơn (theo Shop)
+      // Tạo Order theo từng shop và lưu OrderItem cho cho Order này, cũng như trừ số lượng Products của seller
+      for (const [shopId, items] of shopMap) {
+        const shopTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+        const order = await orderRepoTx.createOrder({
+          orderGroupId: orderGroup.id,
+          shopId,
+          totalAmount: shopTotal,
+          status: OrderStatus.PENDING,
+        });
+
+        for (const item of items) {
+          await itemRepoTx.createOrderItem({
+            orderId: order.id,
+            productId: item.product.id,
+            quantity: item.quantity,
+            priceAtPurchase: item.price,
+          });
+
+          await productRepoTx.decrementStock(item.product.id, item.quantity);
+        }
+      }
+
+      return orderGroup;
+    });
 
     // Invalidate cache
     const productSlugs = products.map((p) => p.slug);
@@ -130,10 +170,10 @@ export class OrderService {
 
       return { result, paymentUrl };
     }
-  }
+  };
 
   // Xem danh sách toàn bộ đơn hàng
-  async getMyOrders(userId: string, queryInput: any) {
+  getMyOrders = async (userId: string, queryInput: any) => {
     const { orders, total, meta } = await this.orderRepo.findOrderList(userId, queryInput);
 
     if (!meta || meta.type !== 'offset') {
@@ -148,10 +188,10 @@ export class OrderService {
         limit: meta.limit,
       }),
     };
-  }
+  };
 
   // Xem chi tiết từng đơn hàng
-  async getOrderDetail(userId: string, orderId: string) {
+  getOrderDetail = async (userId: string, orderId: string) => {
     const order = await this.orderRepo.findOrderDetail(userId, orderId);
 
     if (!order) {
@@ -159,16 +199,42 @@ export class OrderService {
     }
 
     return order;
-  }
+  };
+
+  /**
+   * Logic kiểm tra và hoàn tất OrderGroup -> nghiệp vụ nội bộ của Service
+   */
+  private checkAndCompleteOrderGroup = async (tx: TransactionClient, orderGroupId: string) => {
+    const orderRepoTx = this.orderRepo.useTransaction(tx);
+    const orderGroupRepoTx = this.orderGroupRepo.useTransaction(tx);
+
+    // 1. Lấy trạng thái của tất cả đơn hàng con qua Repo
+    const orders = await orderRepoTx.findStatusesByGroupId(orderGroupId);
+
+    if (!orders || orders.length === 0) {
+      throw new AppError('Không tìm thấy đơn hàng nào trong orderGroup này', StatusCodes.NOT_FOUND);
+    }
+
+    // 2. Kiểm tra tất cả đã được DELIVERED chưa
+    const allDelivered = orders.every((order) => order.status === OrderStatus.DELIVERED);
+
+    // 3. Nếu cthoar mãn, cập nhật trạng thái OrderGroup
+    if (allDelivered) {
+      await orderGroupRepoTx.updatePaymentStatus(
+        orderGroupId,
+        PaymentStatus.COMPLETED,
+      );
+    }
+  };
 
   /**
    * Cập nhật trạng thái đơn hàng
    */
-  async updateOrderStatus(
+  updateOrderStatus = async (
     shopId: string,
     orderId: string,
     nextStatus: OrderStatus, // Trạng thái đơn hàng mà Seller muốn cập nhật
-  ) {
+  ) => {
     const order = await this.orderRepo.findOrderWithDetails(orderId);
 
     if (!order) {
@@ -196,10 +262,64 @@ export class OrderService {
       );
     }
 
-    return await this.orderRepo.updateStatusTransaction(orderId, order, nextStatus);
-  }
+    // return await this.orderRepo.updateStatusTransaction(orderId, order, nextStatus);
+    return await this.txManager.run(async (tx) => {
+      const orderRepoTx = this.orderRepo.useTransaction(tx);
+      const productRepoTx = this.productRepo.useTransaction(tx);
+      const shopRepoTx = this.shopRepo.useTransaction(tx);
+      const transactionRepoTx = this.transactionRepo.useTransaction(tx);
 
-  async getShopOrders(shopId: string, queryInput: any) {
+      // 1, Cập nhật trạng thái mới cho đơn hàng
+      const updatedOrder = await orderRepoTx.updateStatus(orderId, nextStatus);
+
+      // 2. Nếu Seller cập nhật đơn hàng là bị hủy
+      if (nextStatus === OrderStatus.CANCELLED) {
+        for (const item of order.orderItems) {
+          await productRepoTx.incrementStock(item.productId, item.quantity);
+        }
+
+        await transactionRepoTx.createTransaction({
+          type: TransactionType.REFUND,
+          amount: 0,
+          status: PaymentStatus.COMPLETED,
+          shopId: order.shopId,
+          orderId: order.id,
+          orderGroupId: order.orderGroupId,
+          description: 'Đơn hàng bị hủy, rollback stock',
+        });
+      }
+
+      // 3. Logic xử lý khi đơn hàng giao hàng thành công và tiền mặt COD
+      if (
+        nextStatus === OrderStatus.DELIVERED &&
+        order.orderGroup.paymentMethod === PaymentMethod.COD
+      ) {
+        // Đánh dấu là đã đối soát
+        await orderRepoTx.updatePayoutStatus(orderId, PayoutStatus.PAID_OUT);
+
+        // Cộng tiền vào số dư cho Shop
+        await shopRepoTx.incrementBalance(order.shopId, Number(order.totalAmount));
+
+        // Tạo Transaction ghi nhận tiền
+        await transactionRepoTx.createTransaction({
+          type: TransactionType.PAYMENT,
+          amount: order.totalAmount,
+          status: PaymentStatus.COMPLETED,
+          shopId: order.shopId,
+          orderId: order.id,
+          orderGroupId: order.orderGroupId,
+          description: 'Đơn hàng thanh toán khi nhận hàng đã được giao',
+        });
+
+        // Kiểm tra và cập nhật orderGroup
+        await this.checkAndCompleteOrderGroup(tx, order.orderGroupId);
+      }
+
+      return updatedOrder;
+    });
+  };
+
+  getShopOrders = async (shopId: string, queryInput: any) => {
     const { orders, total, meta } = await this.orderRepo.findShopOrders(shopId, queryInput);
 
     if (!meta || meta.type !== 'offset') {
@@ -214,9 +334,9 @@ export class OrderService {
         limit: meta.limit,
       }),
     };
-  }
+  };
 
-  async getShopAnalytics(shopId: string) {
+  getShopAnalytics = async (shopId: string) => {
     const cacheKey = CACHE_KEYS.SHOP.ANALYTICS(shopId);
 
     return cacheService.getOrSet(
@@ -224,5 +344,5 @@ export class OrderService {
       async () => this.orderRepo.getShopAnalyticsStats(shopId),
       CACHE_TTL.TINY,
     );
-  }
+  };
 }
