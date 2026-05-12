@@ -70,7 +70,7 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await this.userRepo.findByEmail(email);
+    const user = await this.userRepo.findByEmail(email, true);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, StatusCodes.UNAUTHORIZED);
@@ -79,6 +79,10 @@ export class AuthService {
     // Check xác thực email
     if (!user.isVerified) {
       throw new AppError('Vui lòng xác thực email trước khi đăng nhập', StatusCodes.FORBIDDEN);
+    }
+
+    if (user.deletedAt) {
+      throw new AppError('Tài khoản của bạn đã bị chặn', StatusCodes.FORBIDDEN);
     }
 
     const tokens = await this.generateAndStoreTokens(user.id, user.role);
@@ -171,4 +175,4 @@ export class AuthService {
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
     await sessionService.deleteAllSessions(userId);
   }
-};
+}

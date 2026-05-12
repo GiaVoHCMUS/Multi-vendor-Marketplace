@@ -72,6 +72,7 @@ describe('authService', () => {
     role: UserRole.USER,
     fullName: fullName,
     isVerified: true,
+    deletedAt: null,
   };
 
   beforeEach(() => {
@@ -84,8 +85,8 @@ describe('authService', () => {
       markEmailAsVerified: jest.fn(),
     };
 
-    authService = new AuthService(mockUserRepo)
-  })
+    authService = new AuthService(mockUserRepo);
+  });
 
   describe('register()', () => {
     it('should throw error if email already exists', async () => {
@@ -195,6 +196,27 @@ describe('authService', () => {
 
       await expect(promise).rejects.toThrow(AppError);
       expect(promise).rejects.toMatchObject({
+        statusCode: StatusCodes.FORBIDDEN,
+      });
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should throw error if user is blocked', async () => {
+      const mockUser = {
+        ...user,
+        isVerified: true,
+        deletedAt: Date.now(),
+      };
+      mockUserRepo.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const spy = jest.spyOn(authService, 'generateAndStoreTokens');
+      const promise = authService.login(email, password);
+
+      await expect(promise).rejects.toThrow(AppError);
+      await expect(promise).rejects.toMatchObject({
+        message: 'Tài khoản của bạn đã bị chặn',
         statusCode: StatusCodes.FORBIDDEN,
       });
 

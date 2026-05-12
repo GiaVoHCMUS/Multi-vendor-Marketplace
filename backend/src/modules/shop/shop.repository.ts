@@ -71,7 +71,7 @@ export class ShopRepository extends BaseRepository<
   }
 
   async updateShopStatus(shopId: string, status: ShopStatus) {
-    return this.update(shopId, { status });
+    return this.update(shopId, { status }, { select: this.shopSelect });
   }
 
   async countActiveShops() {
@@ -108,6 +108,6 @@ export class ShopRepository extends BaseRepository<
    * Cộng thêm tiền vào số dư của Shop sau khi hoàn tất đơn hàng
    */
   async incrementBalance(shopId: string, amount: number) {
-    return this.update(shopId, { balance: { increment: amount } });
+    return this.update(shopId, { balance: { increment: amount } }, { select: this.shopSelect });
   }
 }

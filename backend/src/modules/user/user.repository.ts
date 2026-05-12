@@ -52,8 +52,8 @@ export class UserRepository extends BaseRepository<
     return this.update(id, { password }, { select: this.profileSelect });
   }
 
-  async findByEmail(email: string) {
-    return this.findOne({ email, deletedAt: null });
+  async findByEmail(email: string, includeDeleted = false) {
+    return this.findOne({ email, ...(includeDeleted ? {} : { deletedAt: null }) });
   }
 
   async markEmailAsVerified(userId: string) {
