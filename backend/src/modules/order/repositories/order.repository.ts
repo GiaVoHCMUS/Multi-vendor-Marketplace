@@ -2,15 +2,11 @@ import { BaseRepository } from '@/shared/repositories/base.repository';
 import {
   Order,
   OrderStatus,
-  PaymentMethod,
   PaymentStatus,
   PayoutStatus,
   Prisma,
   PrismaClient,
-  TransactionType,
 } from '@prisma/client';
-import { CheckoutInput } from './order.type';
-import { checkAndCompleteOrderGroup } from './order.helper';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 
 export type CheckoutItemPayload = {
@@ -37,7 +33,7 @@ export type OrderWithDetails = Prisma.OrderGetPayload<{
 
 export class OrderRepository extends BaseRepository<
   Order,
-  Prisma.OrderCreateInput,
+  Prisma.OrderCreateInput | Prisma.OrderUncheckedCreateInput,
   Prisma.OrderUpdateInput,
   Prisma.OrderFindManyArgs,
   Prisma.OrderWhereInput
@@ -185,63 +181,11 @@ export class OrderRepository extends BaseRepository<
   }
 
   /**
-   * Transaction: Tạo Group, Order, OrderItem và trừ Stock
+   * Tạo một Order mới
+   * Sử dụng Unchecked để có thể truyền trực tiếp Id
    */
-  async createCheckoutTransaction(
-    userId: string,
-    totalAmount: number,
-    data: CheckoutInput,
-    shopMap: Map<string, CheckoutItemPayload[]>,
-  ) {
-    const prismaClient = this.client as PrismaClient;
-
-    return await prismaClient.$transaction(async (tx) => {
-      // 1. Lưu OrderGroup vào database
-      const orderGroup = await tx.orderGroup.create({
-        data: {
-          userId,
-          totalAmount,
-          paymentMethod: data.paymentMethod,
-          paymentStatus: PaymentStatus.PENDING,
-          shippingName: data.shippingName,
-          shippingPhone: data.shippingPhone,
-          shippingAddress: data.shippingAddress,
-        },
-      });
-
-      // 2. Chia các orderGroup đó thành các Order nhỏ hơn (theo Shop)
-      // Tạo Order theo từng shop và lưu OrderItem cho cho Order này, cũng như trừ số lượng Products của seller
-      for (const [shopId, items] of shopMap) {
-        const shopTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-        const order = await tx.order.create({
-          data: {
-            orderGroupId: orderGroup.id,
-            shopId,
-            totalAmount: shopTotal,
-            status: OrderStatus.PENDING,
-          },
-        });
-
-        for (const item of items) {
-          await tx.orderItem.create({
-            data: {
-              orderId: order.id,
-              productId: item.product.id,
-              quantity: item.quantity,
-              priceAtPurchase: item.price,
-            },
-          });
-
-          await tx.product.update({
-            where: { id: item.product.id },
-            data: { stock: { decrement: item.quantity } },
-          });
-        }
-      }
-
-      return orderGroup;
-    });
+  async createOrder(data: Prisma.OrderUncheckedCreateInput) {
+    return this.create(data);
   }
 
   /**
@@ -258,77 +202,20 @@ export class OrderRepository extends BaseRepository<
   }
 
   /**
-   * Transaction: Cập nhật trạng thái đơn hàng, hoàn kho hoặc đối soát tiền
+   * Cập nhật trạng thái thanh toán (Payout) cho đơn hàng sau khi đối soát
    */
-  async updateStatusTransaction(orderId: string, order: OrderWithDetails, nextStatus: OrderStatus) {
-    const prismaClient = this.client as PrismaClient;
-
-    return await prismaClient.$transaction(async (tx) => {
-      // 1. Cập nhật trạng thái mới cho Order
-      const updatedOrder = await tx.order.update({
-        where: { id: orderId },
-        data: { status: nextStatus },
-      });
-
-      // 2. Nếu Seller cập nhật đơn hàng là bị hủy
-      if (nextStatus === OrderStatus.CANCELLED) {
-        for (const item of order.orderItems) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
-        }
-
-        // Tạo Transaction ghi nhận hủy đơn (chỉ thông tin, không thay đổi tiền)
-        await tx.transaction.create({
-          data: {
-            type: TransactionType.REFUND,
-            amount: 0, // COD chưa trả tiền → ghi 0
-            status: PaymentStatus.COMPLETED,
-            shopId: order.shopId,
-            orderId: order.id,
-            orderGroupId: order.orderGroupId,
-            description: 'Đơn hàng bị hủy, rollback stock',
-          },
-        });
-      }
-
-      // 3. Logic xử lý khi đơn hàng giao hàng thành công và tiền mặt COD
-      if (
-        nextStatus === OrderStatus.DELIVERED &&
-        order.orderGroup.paymentMethod === PaymentMethod.COD
-      ) {
-        // Đánh dấu là đã đối soát
-        await tx.order.update({
-          where: { id: orderId },
-          data: { payoutStatus: PayoutStatus.PAID_OUT, payoutAt: new Date() },
-        });
-
-        // Cộng tiền vào số dư cho Shop
-        await tx.shop.update({
-          where: { id: order.shopId },
-          data: { balance: { increment: Number(order.totalAmount) } },
-        });
-
-        // Tạo Transaction ghi nhận tiền
-        await tx.transaction.create({
-          data: {
-            type: TransactionType.PAYMENT,
-            amount: order.totalAmount,
-            status: PaymentStatus.COMPLETED,
-            shopId: order.shopId,
-            orderId: order.id,
-            orderGroupId: order.orderGroupId,
-            description: 'Đơn hàng thanh toán khi nhận hàng đã được giao',
-          },
-        });
-
-        // Kiểm tra và cập nhật orderGroup
-        await checkAndCompleteOrderGroup(tx, order.orderGroupId);
-      }
-
-      return updatedOrder;
+  async updatePayoutStatus(orderId: string, payoutStatus: PayoutStatus) {
+    return this.update(orderId, {
+      payoutStatus,
+      payoutAt: payoutStatus === PayoutStatus.PAID_OUT ? new Date() : null,
     });
+  }
+
+  /**
+   * Cập nhật trạng thái cơ bản của đơn hàng
+   */
+  async updateStatus(orderId: string, status: OrderStatus) {
+    return this.update(orderId, { status });
   }
 
   /**
@@ -410,10 +297,16 @@ export class OrderRepository extends BaseRepository<
     };
   }
 
+  /**
+   * Đếm tổng số lượng đơn hàng trên toàn hệ thống (Dành cho Admin Stats)
+   */
   async countTotalOrders() {
     return this.count();
   }
 
+  /**
+   * Tính tổng doanh thu hệ thống từ các đơn hàng đã hoàn tất thanh toán
+   */
   async calculateTotalRevenue() {
     const result = await (this.client as PrismaClient).orderGroup.aggregate({
       _sum: { totalAmount: true },
@@ -422,6 +315,10 @@ export class OrderRepository extends BaseRepository<
     return Number(result._sum.totalAmount ?? 0);
   }
 
+  /**
+   * Truy vấn danh sách đơn hàng dành cho giao diện quản trị (Admin Dashboard)
+   * Bao gồm thông tin Shop, User và các sản phẩm đã mua
+   */
   async findOrdersForAdmin(queryInput: any) {
     const queryHelper = new PrismaQueryHelper(queryInput)
       .paginate()
@@ -447,5 +344,12 @@ export class OrderRepository extends BaseRepository<
     ]);
 
     return { orders, total, meta };
+  }
+
+  /**
+   * Lấy danh sách trạng thái của tất cả đơn hàng con trong một nhóm
+   */
+  async findStatusesByGroupId(orderGroupId: string) {
+    return this.findAll({ orderGroupId }, { select: { status: true } });
   }
 }
