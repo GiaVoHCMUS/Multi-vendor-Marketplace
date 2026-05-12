@@ -3,14 +3,13 @@ import { AppError } from '@/shared/utils/AppError';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { CartRepository } from './repositories/cart.repository';
-import { productRepository } from '../products/repositories/product.repository';
+import { ProductRepository } from '../products/repositories/product.repository';
 
 export class CartService {
-  private readonly cartRepo: CartRepository;
-
-  constructor(cartRepo: CartRepository) {
-    this.cartRepo = cartRepo;
-  }
+  constructor(
+    private readonly cartRepo: CartRepository,
+    private readonly productRepo: ProductRepository,
+  ) {}
 
   async getCart(userId: string) {
     const items = await this.cartRepo.getAll(userId);
@@ -27,7 +26,7 @@ export class CartService {
     // Lấy Product Information
     const productIds = cartItems.map((i) => i.productId);
 
-    const products = await productRepository.findPublishedByIds(productIds);
+    const products = await this.productRepo.findPublishedByIds(productIds);
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -56,7 +55,7 @@ export class CartService {
   }
 
   async addToCart(userId: string, item: AddToCartInput) {
-    const product = await productRepository.findPublishedById(item.productId);
+    const product = await this.productRepo.findPublishedById(item.productId);
 
     if (!product) {
       throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -80,7 +79,7 @@ export class CartService {
       throw new AppError(MESSAGE.CART.PRODUCT_NOT_IN_CART, StatusCodes.NOT_FOUND);
     }
 
-    const product = await productRepository.findPublishedById(productId);
+    const product = await this.productRepo.findPublishedById(productId);
 
     if (!product) {
       throw new AppError(MESSAGE.CART.PRODUCT_NOT_FOUND, StatusCodes.NOT_FOUND);

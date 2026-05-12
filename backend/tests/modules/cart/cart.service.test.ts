@@ -1,20 +1,12 @@
 import { CartService } from '@/modules/cart/cart.service';
-import { RedisCartRepository } from '@/modules/cart/repositories/redis-cart.cache';
-import { productRepository } from '@/modules/products/repositories/product.repository';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { AppError } from '@/shared/utils/AppError';
 import { StatusCodes } from 'http-status-codes';
 
-jest.mock('@/modules/products/repositories/product.repository', () => ({
-  productRepository: {
-    findPublishedById: jest.fn(),
-    findPublishedByIds: jest.fn(),
-  },
-}));
-
 describe('CartService', () => {
   let cartService: CartService;
-  let mockCartRepo: jest.Mocked<RedisCartRepository>;
+  let mockCartRepo: any;
+  let mockProductRepo: any;
 
   const userId = 'user-01';
   const productId = 'prod-01';
@@ -30,10 +22,15 @@ describe('CartService', () => {
       remove: jest.fn(),
       clear: jest.fn(),
       setTTL: jest.fn(),
-    } as any;
+    };
+
+    mockProductRepo = {
+      findPublishedById: jest.fn(),
+      findPublishedByIds: jest.fn(),
+    };
 
     // Inject mock vào service
-    cartService = new CartService(mockCartRepo);
+    cartService = new CartService(mockCartRepo, mockProductRepo);
   });
 
   describe('getCart()', () => {
@@ -44,7 +41,7 @@ describe('CartService', () => {
 
       expect(result).toEqual({ items: [], totalItems: 0 });
       expect(mockCartRepo.getAll).toHaveBeenCalledWith(userId);
-      expect(productRepository.findPublishedByIds).not.toHaveBeenCalled();
+      expect(mockProductRepo.findPublishedByIds).not.toHaveBeenCalled();
     });
 
     it('should map product information and calculate total items correctly', async () => {
@@ -62,7 +59,7 @@ describe('CartService', () => {
         shop: { id: 'shop-01', name: 'My Shop' },
       };
 
-      (productRepository.findPublishedByIds as jest.Mock).mockResolvedValue([mockProduct]);
+      (mockProductRepo.findPublishedByIds as jest.Mock).mockResolvedValue([mockProduct]);
 
       const result = await cartService.getCart(userId);
 
@@ -77,7 +74,7 @@ describe('CartService', () => {
     const input = { productId, quantity: 5 };
 
     it('should throw error if product is not exist', async () => {
-      (productRepository.findPublishedById as jest.Mock).mockResolvedValue(null);
+      (mockProductRepo.findPublishedById as jest.Mock).mockResolvedValue(null);
 
       const promise = cartService.addToCart(userId, input);
 
@@ -93,7 +90,7 @@ describe('CartService', () => {
     });
 
     it('should throw error if new total quantity exceeds stock', async () => {
-      (productRepository.findPublishedById as jest.Mock).mockResolvedValue({
+      (mockProductRepo.findPublishedById as jest.Mock).mockResolvedValue({
         id: productId,
         stock: 3,
       });
@@ -113,7 +110,7 @@ describe('CartService', () => {
     });
 
     it('should increment quantity and set TTL if valid', async () => {
-      (productRepository.findPublishedById as jest.Mock).mockResolvedValue({
+      (mockProductRepo.findPublishedById as jest.Mock).mockResolvedValue({
         id: productId,
         stock: 10,
       });
@@ -141,7 +138,7 @@ describe('CartService', () => {
 
     it('should throw error if product is not exist', async () => {
       mockCartRepo.exists.mockResolvedValue(1);
-      (productRepository.findPublishedById as jest.Mock).mockResolvedValue(null);
+      mockProductRepo.findPublishedById.mockResolvedValue(null);
 
       const promise = cartService.updateItem(userId, productId, 10);
       await expect(promise).rejects.toThrow(
@@ -153,7 +150,7 @@ describe('CartService', () => {
 
     it("should throw error if input quantity is greater than the product's stock", async () => {
       mockCartRepo.exists.mockResolvedValue(1);
-      (productRepository.findPublishedById as jest.Mock).mockResolvedValue({
+      mockProductRepo.findPublishedById.mockResolvedValue({
         id: productId,
         stock: 5,
       });
@@ -168,7 +165,7 @@ describe('CartService', () => {
 
     it('should set new quantity and update TTL successfully', async () => {
       mockCartRepo.exists.mockResolvedValue(1);
-      (productRepository.findPublishedById as jest.Mock).mockResolvedValue({
+      mockProductRepo.findPublishedById.mockResolvedValue({
         id: productId,
         stock: 50,
       });
