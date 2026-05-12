@@ -111,5 +111,3 @@ export class ShopRepository extends BaseRepository<
     return this.update(shopId, { balance: { increment: amount } });
   }
 }
-
-export const shopRepository = new ShopRepository();

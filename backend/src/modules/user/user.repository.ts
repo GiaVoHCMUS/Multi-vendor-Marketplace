@@ -105,5 +105,3 @@ export class UserRepository extends BaseRepository<
     return this.update(userId, { role });
   }
 }
-
-export const userRepository = new UserRepository();

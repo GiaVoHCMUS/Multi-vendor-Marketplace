@@ -1,22 +1,24 @@
 import { Request, Response } from 'express';
 import { successResponse } from '../../shared/utils/response';
-import { authService } from './auth.service';
 import { AppError } from '@/shared/utils/AppError';
 import { refreshTokenCookieOptions } from '@/shared/utils/cookie';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
+import { AuthService } from './auth.service';
 
-export const authController = {
-  register: async (req: Request, res: Response) => {
+export class AuthController {
+  constructor (private readonly authService: AuthService) {}
+
+  register = async (req: Request, res: Response) => {
     const { email, password, fullName } = req.body;
-    await authService.register(email, password, fullName);
+    await this.authService.register(email, password, fullName);
 
     successResponse(res, StatusCodes.CREATED, MESSAGE.AUTH.REGISTER_SUCCESS);
-  },
+  }
 
-  login: async (req: Request, res: Response) => {
+  login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
-    const result = await authService.login(email, password);
+    const result = await this.authService.login(email, password);
 
     const { refreshToken, accessToken, user } = result;
 
@@ -25,12 +27,12 @@ export const authController = {
       user,
       accessToken,
     });
-  },
+  }
 
-  logout: async (req: Request, res: Response) => {
+  logout = async (req: Request, res: Response) => {
     const refreshToken: string = req.cookies.refreshToken;
     if (refreshToken) {
-      await authService.logout(refreshToken);
+      await this.authService.logout(refreshToken);
     }
 
     res.clearCookie('refreshToken', {
@@ -41,42 +43,42 @@ export const authController = {
     });
 
     successResponse(res, StatusCodes.OK, MESSAGE.AUTH.LOGOUT_SUCCESS);
-  },
+  }
 
-  refreshToken: async (req: Request, res: Response) => {
+  refreshToken= async (req: Request, res: Response) => {
     const refreshToken: string = req.cookies.refreshToken;
 
     if (!refreshToken) {
       throw new AppError(MESSAGE.AUTH.REFRESH_TOKEN_NOT_FOUND, StatusCodes.UNAUTHORIZED);
     }
 
-    const tokens = await authService.refreshToken(refreshToken);
+    const tokens = await this.authService.refreshToken(refreshToken);
 
     res.cookie('refreshToken', tokens.refreshToken, refreshTokenCookieOptions);
 
     successResponse(res, StatusCodes.OK, MESSAGE.AUTH.REFRESH_TOKEN_SUCCESS, {
       accessToken: tokens.accessToken,
     });
-  },
+  }
 
-  forgotPassword: async (req: Request, res: Response) => {
+  forgotPassword= async (req: Request, res: Response) => {
     const { email } = req.body;
-    await authService.forgotPassword(email);
+    await this.authService.forgotPassword(email);
 
     successResponse(res, StatusCodes.OK, MESSAGE.AUTH.FORGOT_PASSWORD_SUCCESS);
-  },
+  }
 
-  resetPassword: async (req: Request, res: Response) => {
+  resetPassword= async (req: Request, res: Response) => {
     const { token, password } = req.body;
-    await authService.resetPassword(token, password);
+    await this.authService.resetPassword(token, password);
 
     successResponse(res, StatusCodes.OK, MESSAGE.AUTH.RESET_PASSWORD_SUCCESS);
-  },
+  }
 
-  verifyEmail: async (req: Request, res: Response) => {
+  verifyEmail= async (req: Request, res: Response) => {
     const { token } = req.query;
-    await authService.verifyEmail(token as string);
+    await this.authService.verifyEmail(token as string);
 
     successResponse(res, StatusCodes.OK, MESSAGE.AUTH.VERIFY_EMAIL_SUCCESS);
-  },
+  }
 };

@@ -9,13 +9,15 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { SESSION_TTL } from '@/shared/constants/session.constants';
 import { StatusCodes } from 'http-status-codes';
-import { userRepository } from '../user/user.repository';
+import { UserRepository } from '../user/user.repository';
 import { authTokenService } from './services/auth-token.service';
 
 // src/modules/auth/auth.service.ts
-export const authService = {
+export class AuthService {
+  constructor(private readonly userRepo: UserRepository) {}
+
   // Tạo cặp token và lưu session vào Redis (Hỗ trợ Multi-device)
-  generateAndStoreTokens: async (userId: string, role: UserRole): Promise<TokenPayload> => {
+  async generateAndStoreTokens(userId: string, role: UserRole): Promise<TokenPayload> {
     const tokenId = uuidv4(); // Unique id cho mỗi session (device)
     const accessToken = tokenUtils.generateAccessToken(userId, role);
     const refreshToken = tokenUtils.generateRefreshToken(userId, role, tokenId);
@@ -29,16 +31,16 @@ export const authService = {
     );
 
     return { accessToken, refreshToken };
-  },
+  }
 
-  register: async (email: string, passwordInput: string, fullName: string) => {
-    const existingUser = await userRepository.findByEmail(email);
+  async register(email: string, passwordInput: string, fullName: string) {
+    const existingUser = await this.userRepo.findByEmail(email);
     if (existingUser) {
       throw new AppError(MESSAGE.AUTH.EMAIL_ALREADY_EXISTS, StatusCodes.CONFLICT);
     }
 
     const hashPassword = await bcrypt.hash(passwordInput, 12);
-    const user = await userRepository.createUser({
+    const user = await this.userRepo.createUser({
       email,
       password: hashPassword,
       fullName,
@@ -53,22 +55,22 @@ export const authService = {
       fullName: user.fullName,
       token: verificationToken,
     });
-  },
+  }
 
-  verifyEmail: async (token: string) => {
+  async verifyEmail(token: string) {
     const userId = await authTokenService.getUserIdByVerifyToken(token);
     if (!userId) {
       throw new AppError(MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN, StatusCodes.BAD_REQUEST);
     }
 
-    await userRepository.markEmailAsVerified(userId);
+    await this.userRepo.markEmailAsVerified(userId);
 
     // Xóa token sau khi dùng xong
     await authTokenService.deleteVerifyEmailToken(token);
-  },
+  }
 
-  login: async (email: string, password: string) => {
-    const user = await userRepository.findByEmail(email);
+  async login(email: string, password: string) {
+    const user = await this.userRepo.findByEmail(email);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError(MESSAGE.AUTH.INVALID_CREDENTIALS, StatusCodes.UNAUTHORIZED);
@@ -79,7 +81,7 @@ export const authService = {
       throw new AppError('Vui lòng xác thực email trước khi đăng nhập', StatusCodes.FORBIDDEN);
     }
 
-    const tokens = await authService.generateAndStoreTokens(user.id, user.role);
+    const tokens = await this.generateAndStoreTokens(user.id, user.role);
 
     return {
       user: {
@@ -92,14 +94,14 @@ export const authService = {
       },
       ...tokens,
     };
-  },
+  }
 
-  logout: async (refreshToken: string) => {
+  async logout(refreshToken: string) {
     const decoded = tokenUtils.verifyRefreshToken(refreshToken);
     await sessionService.deleteSession(decoded.sub, decoded.tokenId);
-  },
+  }
 
-  refreshToken: async (oldRefreshToken: string): Promise<TokenPayload> => {
+  async refreshToken(oldRefreshToken: string): Promise<TokenPayload> {
     const decoded = tokenUtils.verifyRefreshToken(oldRefreshToken);
     const { sub: userId, role, tokenId } = decoded;
 
@@ -133,11 +135,11 @@ export const authService = {
     await sessionService.deleteSession(userId, tokenId);
 
     // Cấp session mới
-    return authService.generateAndStoreTokens(userId, role);
-  },
+    return this.generateAndStoreTokens(userId, role);
+  }
 
-  forgotPassword: async (email: string) => {
-    const user = await userRepository.findByEmail(email);
+  async forgotPassword(email: string) {
+    const user = await this.userRepo.findByEmail(email);
 
     if (!user) {
       throw new AppError(MESSAGE.AUTH.NOT_FOUND_EMAIL, StatusCodes.NOT_FOUND);
@@ -152,9 +154,9 @@ export const authService = {
       fullName: user.fullName,
       token: resetToken,
     });
-  },
+  }
 
-  resetPassword: async (token: string, password: string) => {
+  async resetPassword(token: string, password: string) {
     const userId = await authTokenService.getUserIdByResetToken(token);
 
     if (!userId) {
@@ -163,10 +165,10 @@ export const authService = {
 
     const hashPassword = await bcrypt.hash(password, 12);
 
-    await userRepository.updatePassword(userId, hashPassword);
+    await this.userRepo.updatePassword(userId, hashPassword);
 
     await authTokenService.deleteResetPasswordToken(token);
     // Logout tất cả thiết bị vì mật khẩu đã thay đổi (Bảo mật)
     await sessionService.deleteAllSessions(userId);
-  },
+  }
 };

@@ -1,26 +1,14 @@
-import { userRepository } from '@/modules/user/user.repository';
 import { authTokenService } from '@/modules/auth/services/auth-token.service';
 import bcrypt from 'bcrypt';
 import { sessionService } from '@/modules/auth/services/session.service';
 import { mailJob } from '@/jobs/mail/mail.job';
 import { tokenUtils } from '@/shared/utils/jwt';
 import { UserRole } from '@prisma/client';
-import { authService } from '@/modules/auth/auth.service';
 import { AppError } from '@/shared/utils/AppError';
 import { StatusCodes } from 'http-status-codes';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { v4 as uuidv4 } from 'uuid';
-
-jest.mock('@/modules/user/user.repository', () => ({
-  userRepository: {
-    getProfileById: jest.fn(),
-    createUser: jest.fn(),
-    updateUser: jest.fn(),
-    updatePassword: jest.fn(),
-    findByEmail: jest.fn(),
-    markEmailAsVerified: jest.fn(),
-  },
-}));
+import { AuthService } from '@/modules/auth/auth.service';
 
 jest.mock('@/modules/auth/services/session.service', () => ({
   sessionService: {
@@ -69,6 +57,9 @@ jest.mock('@/shared/utils/jwt', () => ({
 }));
 
 describe('authService', () => {
+  let mockUserRepo: any;
+  let authService: AuthService;
+
   const userId = 'user-01';
   const email = 'test@example.com';
   const tokenId = 'uuid-token-id';
@@ -83,9 +74,22 @@ describe('authService', () => {
     isVerified: true,
   };
 
+  beforeEach(() => {
+    mockUserRepo = {
+      getProfileById: jest.fn(),
+      createUser: jest.fn(),
+      updateUser: jest.fn(),
+      updatePassword: jest.fn(),
+      findByEmail: jest.fn(),
+      markEmailAsVerified: jest.fn(),
+    };
+
+    authService = new AuthService(mockUserRepo)
+  })
+
   describe('register()', () => {
     it('should throw error if email already exists', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(user);
+      mockUserRepo.findByEmail.mockResolvedValue(user);
 
       const promise = authService.register(email, password, fullName);
 
@@ -96,16 +100,16 @@ describe('authService', () => {
       });
 
       expect(bcrypt.hash).not.toHaveBeenCalled();
-      expect(userRepository.createUser).not.toHaveBeenCalled();
+      expect(mockUserRepo.createUser).not.toHaveBeenCalled();
       expect(uuidv4).not.toHaveBeenCalled();
       expect(authTokenService.saveResetPasswordToken).not.toHaveBeenCalled();
       expect(mailJob.sendWelcomeRegistration).not.toHaveBeenCalled();
     });
 
     it('should register successfully and send verification email', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+      mockUserRepo.findByEmail.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue(user.password);
-      (userRepository.createUser as jest.Mock).mockResolvedValue(user);
+      mockUserRepo.createUser.mockResolvedValue(user);
       (uuidv4 as jest.Mock).mockReturnValue(tokenId);
 
       await authService.register(email, password, fullName);
@@ -130,7 +134,7 @@ describe('authService', () => {
         statusCode: StatusCodes.BAD_REQUEST,
         message: MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN,
       });
-      expect(userRepository.markEmailAsVerified).not.toHaveBeenCalled();
+      expect(mockUserRepo.markEmailAsVerified).not.toHaveBeenCalled();
       expect(authTokenService.deleteVerifyEmailToken).not.toHaveBeenCalled();
     });
 
@@ -139,14 +143,14 @@ describe('authService', () => {
 
       await authService.verifyEmail(tokenId);
 
-      expect(userRepository.markEmailAsVerified).toHaveBeenCalledWith(userId);
+      expect(mockUserRepo.markEmailAsVerified).toHaveBeenCalledWith(userId);
       expect(authTokenService.deleteVerifyEmailToken).toHaveBeenCalledWith(tokenId);
     });
   });
 
   describe('login()', () => {
     it('should throw error if user is not exist', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+      mockUserRepo.findByEmail.mockResolvedValue(null);
       /**
        * jest.spyOn() dùng để theo dõi một function mà không phá logic thật của nó
        * jest.spyOn(object, methodName)
@@ -166,7 +170,7 @@ describe('authService', () => {
     });
 
     it('should throw error if password is incorrect', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(user);
+      mockUserRepo.findByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       const spy = jest.spyOn(authService, 'generateAndStoreTokens');
@@ -183,7 +187,7 @@ describe('authService', () => {
 
     it('should throw error if email is not verified', async () => {
       user.isVerified = false;
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(user);
+      mockUserRepo.findByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const spy = jest.spyOn(authService, 'generateAndStoreTokens');
@@ -199,7 +203,7 @@ describe('authService', () => {
 
     it('should login successfully and return tokens', async () => {
       user.isVerified = true;
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(user);
+      mockUserRepo.findByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const spy = jest.spyOn(authService, 'generateAndStoreTokens');
@@ -309,7 +313,7 @@ describe('authService', () => {
 
   describe('forgotPassword()', () => {
     it('should throw error if email is not exist', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+      mockUserRepo.findByEmail.mockResolvedValue(null);
 
       const promise = authService.forgotPassword(email);
       await expect(promise).rejects.toThrow(AppError);
@@ -323,7 +327,7 @@ describe('authService', () => {
     });
 
     it('should send forgot password email when user exists', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(user);
+      mockUserRepo.findByEmail.mockResolvedValue(user);
       (uuidv4 as jest.Mock).mockReturnValue(tokenId);
 
       await authService.forgotPassword(email);
@@ -339,7 +343,7 @@ describe('authService', () => {
 
   describe('resetPassword()', () => {
     it('should throw error if email is not exist', async () => {
-      (userRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+      mockUserRepo.findByEmail.mockResolvedValue(null);
 
       const promise = authService.resetPassword(tokenId, password);
       await expect(promise).rejects.toThrow(AppError);
@@ -348,7 +352,7 @@ describe('authService', () => {
         message: MESSAGE.AUTH.INVALID_OR_EXPIRED_TOKEN,
       });
       expect(bcrypt.hash).not.toHaveBeenCalled();
-      expect(userRepository.updatePassword).not.toHaveBeenCalled();
+      expect(mockUserRepo.updatePassword).not.toHaveBeenCalled();
       expect(authTokenService.deleteResetPasswordToken).not.toHaveBeenCalled();
       expect(sessionService.deleteAllSessions).not.toHaveBeenCalled();
     });
@@ -359,7 +363,7 @@ describe('authService', () => {
 
       await authService.resetPassword(tokenId, password);
 
-      expect(userRepository.updatePassword).toHaveBeenCalledWith(userId, user.password);
+      expect(mockUserRepo.updatePassword).toHaveBeenCalledWith(userId, user.password);
       expect(authTokenService.deleteResetPasswordToken).toHaveBeenCalledWith(tokenId);
       expect(sessionService.deleteAllSessions).toHaveBeenCalledWith(userId);
     });
