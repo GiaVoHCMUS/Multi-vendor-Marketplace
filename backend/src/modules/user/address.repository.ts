@@ -2,7 +2,7 @@ import { BaseRepository } from '@/shared/repositories/base.repository';
 import { Prisma, Address } from '@prisma/client';
 import { CreateAddressInput } from './user.type';
 
-class AddressRepository extends BaseRepository<
+export class AddressRepository extends BaseRepository<
   Address,
   Prisma.AddressCreateInput | Prisma.AddressUncheckedCreateInput,
   Prisma.AddressUpdateInput,
@@ -52,5 +52,3 @@ class AddressRepository extends BaseRepository<
     return this.delete(addressId);
   }
 }
-
-export const addressRepository = new AddressRepository();

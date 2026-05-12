@@ -1,24 +1,26 @@
 import { Request, Response } from 'express';
-import { userService } from './user.service';
 import { successResponse } from '@/shared/utils/response';
 import { imageService } from '@/shared/services/image.service';
 import { ImageType } from '@/shared/types/image.type';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
+import { UserService } from './user.service';
 
-export const userController = {
-  getMe: async (req: Request, res: Response) => {
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  getMe = async (req: Request, res: Response) => {
     // Lấy thông tin cá nhân
-    const user = await userService.getMe(req.user!.id);
+    const user = await this.userService.getMe(req.user!.id);
     successResponse(
       res,
       StatusCodes.OK,
       MESSAGE.USER.GET_PROFILE_SUCCESS,
       user,
     );
-  },
+  }
 
-  updateMe: async (req: Request, res: Response) => {
+  updateMe = async (req: Request, res: Response) => {
     // Cập nhật Profile
     let avatarUrl: ImageType | undefined;
     if (req.file) {
@@ -26,40 +28,40 @@ export const userController = {
 
       avatarUrl = image;
     }
-    const user = await userService.updateMe(req.user!.id, req.body, avatarUrl);
+    const user = await this.userService.updateMe(req.user!.id, req.body, avatarUrl);
     successResponse(
       res,
       StatusCodes.OK,
       MESSAGE.USER.UPDATE_PROFILE_SUCCESS,
       user,
     );
-  },
+  }
 
-  getAddresses: async (req: Request, res: Response) => {
+  getAddresses = async (req: Request, res: Response) => {
     // Lấy danh sách địa chỉ (có dùng caching)
-    const list = await userService.getAddresses(req.user!.id);
+    const list = await this.userService.getAddresses(req.user!.id);
     successResponse(
       res,
       StatusCodes.OK,
       MESSAGE.USER.GET_ADDRESS_LIST_SUCCESS,
       list,
     );
-  },
+  }
 
-  createAddress: async (req: Request, res: Response) => {
+  createAddress = async (req: Request, res: Response) => {
     // Tạo địa chỉ mới
-    const address = await userService.createAddress(req.user!.id, req.body);
+    const address = await this.userService.createAddress(req.user!.id, req.body);
     successResponse(
       res,
       StatusCodes.CREATED,
       MESSAGE.USER.ADD_ADDRESS_SUCCESS,
       address,
     );
-  },
+  }
 
-  updateAddress: async (req: Request, res: Response) => {
+  updateAddress = async (req: Request, res: Response) => {
     // Cập nhật địa chỉ
-    const address = await userService.updateAddress(
+    const address = await this.userService.updateAddress(
       req.user!.id,
       req.params.id as string,
       req.body,
@@ -70,11 +72,11 @@ export const userController = {
       MESSAGE.USER.UPDATE_ADDRESS_SUCCESS,
       address,
     );
-  },
+  }
 
-  deleteAddress: async (req: Request, res: Response) => {
+  deleteAddress = async (req: Request, res: Response) => {
     // Xóa địa chỉ
-    await userService.deleteAddress(req.user!.id, req.params.id as string);
+    await this.userService.deleteAddress(req.user!.id, req.params.id as string);
     successResponse(res, StatusCodes.OK, MESSAGE.USER.DELETE_ADDRESS_SUCCESS);
-  },
+  }
 };

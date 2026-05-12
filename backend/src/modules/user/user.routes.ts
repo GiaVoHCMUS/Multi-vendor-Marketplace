@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { protect } from '@/shared/middleware/auth.middleware';
-import { userController } from './user.controller';
 import { upload } from '@/shared/middleware/upload.middleware';
+import { userController } from './user.module';
 import { userSchema } from './user.schema';
 import { catchAsync } from '@/shared/utils/catchAsync';
 

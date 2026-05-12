@@ -5,69 +5,69 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '@/shared/constants/cache.constants';
 import { StatusCodes } from 'http-status-codes';
-import { userRepository } from './user.repository';
-import { addressRepository } from './address.repository';
+import { UserRepository } from './user.repository';
+import { AddressRepository } from './address.repository';
 
-export const userService = {
-  getMe: async (userId: string) => {
-    // Lấy thông tin cá nhân
-    return userRepository.getProfileById(userId);
-  },
+export class UserService {
+  constructor(
+    private readonly userRepo: UserRepository,
+    private readonly addressRepo: AddressRepository,
+  ) {}
+  async getMe(userId: string) {
+    return await this.userRepo.getProfileById(userId);
+  }
 
-  updateMe: async (userId: string, data: UpdateMeInput, file?: ImageType) => {
-    // Cập nhật thông tin
-    return userRepository.updateUser(userId, {
+  async updateMe(userId: string, data: UpdateMeInput, file?: ImageType) {
+    return this.userRepo.updateUser(userId, {
       ...data,
       avatarUrl: file?.url,
       avatarPublicId: file?.publicId,
     });
-  },
+  }
 
-  getAddresses: async (userId: string) => {
+  async getAddresses(userId: string) {
     const cacheKey = CACHE_KEYS.USER.ADDRESS_LIST(userId);
 
     return cacheService.getOrSet(
       cacheKey,
-      async () => {
-        return addressRepository.getUserAddress(userId);
-      },
+      async () => this.addressRepo.getUserAddress(userId),
       CACHE_TTL.MEDIUM,
     );
-  },
+  }
 
-  createAddress: async (userId: string, data: CreateAddressInput) => {
+  async createAddress(userId: string, data: CreateAddressInput) {
     // Tạo địa chỉ mới
     if (data.isDefault) {
-      await addressRepository.clearDefaultStatus(userId);
+      await this.addressRepo.clearDefaultStatus(userId);
     }
 
-    const address = await addressRepository.createAddress(userId, data);
+    const address = await this.addressRepo.createAddress(userId, data);
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
     return address;
-  },
+  }
 
-  updateAddress: async (userId: string, addressId: string, data: UpdateAddressInput) => {
+  async updateAddress(userId: string, addressId: string, data: UpdateAddressInput) {
     // Cập nhật địa chỉ
-    const address = await addressRepository.findAddressByUserId(addressId, userId);
+    const address = await this.addressRepo.findAddressByUserId(addressId, userId);
 
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
     if (data.isDefault) {
-      await addressRepository.clearDefaultStatus(userId);
+      await this.addressRepo.clearDefaultStatus(userId);
     }
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
-    return addressRepository.updateAddressById(addressId, data);
-  },
+    return this.addressRepo.updateAddressById(addressId, data);
+  }
 
-  deleteAddress: async (userId: string, addressId: string) => {
+  async deleteAddress(userId: string, addressId: string) {
     // Xóa địa chỉ
-    const address = await addressRepository.findAddressByUserId(addressId, userId);
+    const address = await this.addressRepo.findAddressByUserId(addressId, userId);
 
     if (!address) {
       throw new AppError(MESSAGE.USER.ADDRESS_NOT_FOUND, StatusCodes.NOT_FOUND);
@@ -75,6 +75,6 @@ export const userService = {
 
     await cacheService.delete(CACHE_KEYS.USER.ADDRESS_LIST(userId));
 
-    return addressRepository.deleteAddress(addressId);
-  },
-};
+    return this.addressRepo.deleteAddress(addressId);
+  }
+}
