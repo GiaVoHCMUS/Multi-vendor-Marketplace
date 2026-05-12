@@ -7,12 +7,12 @@ import { globalErrorHandler } from './shared/middleware/error.middleware';
 import { setupCron } from './jobs/cron';
 // import swaggerUi from 'swagger-ui-express';
 import { registerRoutes } from './routes';
+import { loggerMiddleware } from './shared/middleware/logger.middleware';
 // import { loadSwagger } from './core/config/swagger';
-import { httpLogger } from './shared/middleware/http-logger.middleware';
 
 const app: Application = express();
 
-app.use(httpLogger);
+app.use(loggerMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Middleware để đọc cookie
