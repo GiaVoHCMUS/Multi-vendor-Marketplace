@@ -3,7 +3,12 @@ import { OrderService } from '@/modules/order/order.service';
 import { paymentService } from '@/modules/payment/payment.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { AppError } from '@/shared/utils/AppError';
-import { OrderStatus, PaymentMethod } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  PayoutStatus,
+} from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
 jest.mock('@/jobs/mail/mail.job', () => ({
@@ -29,36 +34,57 @@ describe('OrderService', () => {
   let mockOrderRepo: any;
   let mockUserRepo: any;
   let mockProductCacheRepo: any;
+  let mockTxManager: any;
+  let mockOrderGroupRepo: any;
+  let mockOrderItemRepo: any;
+  let mockShopRepo: any;
+  let mockTransactionRepo: any;
+
   let orderService: OrderService;
 
   // Trước các test case thì sẽ chạy
   beforeEach(() => {
     // Mock các Repositories
-    mockCartRepo = {
-      getAll: jest.fn(),
-      clear: jest.fn(),
-    };
+    mockCartRepo = { getAll: jest.fn(), clear: jest.fn() };
 
     mockProductRepo = {
       findProductsForCheckout: jest.fn(),
+      useTransaction: jest.fn().mockReturnThis(),
+      decrementStock: jest.fn(),
+      incrementStock: jest.fn(),
     };
 
     mockOrderRepo = {
-      createCheckoutTransaction: jest.fn(),
+      useTransaction: jest.fn().mockReturnThis(),
       findOrderList: jest.fn(),
       findOrderDetail: jest.fn(),
       findOrderWithDetails: jest.fn(),
-      updateStatusTransaction: jest.fn(),
+      updateStatus: jest.fn(),
+      updatePayoutStatus: jest.fn(),
+      findStatusesByGroupId: jest.fn(),
       findShopOrders: jest.fn(),
       getShopAnalyticsStats: jest.fn(),
+      createOrder: jest.fn(),
     };
 
-    mockUserRepo = {
-      getProfileById: jest.fn(),
+    mockUserRepo = { getProfileById: jest.fn() };
+
+    mockProductCacheRepo = { invalidateCachesAfterCheckout: jest.fn() };
+
+    mockTxManager = {
+      run: jest.fn().mockImplementation(async (fn) => await fn('fake-tx-client')),
     };
 
-    mockProductCacheRepo = {
-      invalidateCachesAfterCheckout: jest.fn(),
+    mockOrderGroupRepo = {
+      useTransaction: jest.fn().mockReturnThis(),
+      createOrderGroup: jest.fn(),
+      updatePaymentStatus: jest.fn(),
+    };
+    mockOrderItemRepo = { useTransaction: jest.fn().mockReturnThis(), createOrderItem: jest.fn() };
+    mockShopRepo = { useTransaction: jest.fn().mockReturnThis(), incrementBalance: jest.fn() };
+    mockTransactionRepo = {
+      useTransaction: jest.fn().mockReturnThis(),
+      createTransaction: jest.fn(),
     };
 
     // Khởi tạo Service với các Mock Repositories
@@ -68,6 +94,11 @@ describe('OrderService', () => {
       mockOrderRepo,
       mockUserRepo,
       mockProductCacheRepo,
+      mockTxManager,
+      mockOrderGroupRepo,
+      mockOrderItemRepo,
+      mockShopRepo,
+      mockTransactionRepo,
     );
   });
 
@@ -81,6 +112,10 @@ describe('OrderService', () => {
       shippingAddress: 'HCM',
     };
     const user = { id: userId, email: 'test@gmail.com', fullName: 'Tester' };
+    const mockProducts = [
+      { id: 'prod-1', price: 100, stock: 10, shopId: 'shop-1', slug: 'prod-1-slug' },
+    ];
+    const mockCart = { 'prod-1': '2' };
 
     it('should throw error if user not found', async () => {
       mockUserRepo.getProfileById.mockResolvedValue(null);
@@ -138,44 +173,96 @@ describe('OrderService', () => {
     });
 
     it('should checkout successfully with COD payment', async () => {
-      const mockResult = { id: 'order-group-1' };
       mockUserRepo.getProfileById.mockResolvedValue(user);
-      mockCartRepo.getAll.mockResolvedValue({ 'prod-1': '2' });
-      mockProductRepo.findProductsForCheckout.mockResolvedValue([
-        { id: 'prod-1', price: 100, stock: 10, shopId: 'shop-1', slug: 'prod-1-slug' },
-      ]);
-      mockOrderRepo.createCheckoutTransaction.mockResolvedValue(mockResult);
+      mockCartRepo.getAll.mockResolvedValue(mockCart);
+      mockProductRepo.findProductsForCheckout.mockResolvedValue(mockProducts);
+
+      const mockOrderGroup = { id: 'group-1' };
+      const mockOrder = { id: 'order-1' };
+
+      mockOrderGroupRepo.createOrderGroup.mockResolvedValue(mockOrderGroup);
+      mockOrderRepo.createOrder.mockResolvedValue(mockOrder);
 
       const result = await orderService.checkout(userId, ipAddr, checkoutData);
 
-      expect(mockOrderRepo.createCheckoutTransaction).toHaveBeenCalled();
+      // 3. Assertions (Kiểm tra logic điều phối Transaction)
+      expect(mockTxManager.run).toHaveBeenCalled();
+
+      // Kiểm tra xem các repo có được switch sang mode transaction không
+      expect(mockOrderGroupRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockOrderRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockOrderItemRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockProductRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+
+      // Kiểm tra việc tạo OrderGroup
+      expect(mockOrderGroupRepo.createOrderGroup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          totalAmount: 200, // 100 * 2
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+      );
+
+      // Kiểm tra việc tạo Order lẻ cho Shop
+      expect(mockOrderRepo.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderGroupId: 'group-1',
+          shopId: 'shop-1',
+          totalAmount: 200,
+        }),
+      );
+
+      // Kiểm tra tạo OrderItem và trừ kho
+      expect(mockOrderItemRepo.createOrderItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: 'order-1',
+          productId: 'prod-1',
+          quantity: 2,
+        }),
+      );
+      expect(mockProductRepo.decrementStock).toHaveBeenCalledWith('prod-1', 2);
+
+      // Kiểm tra hậu xử lý COD: Xóa giỏ, gửi mail, xóa cache
       expect(mockProductCacheRepo.invalidateCachesAfterCheckout).toHaveBeenCalledWith([
         'prod-1-slug',
       ]);
       expect(mockCartRepo.clear).toHaveBeenCalledWith(userId);
-      expect(mailJob.sendOrderConfirmation).toHaveBeenCalledWith(
-        expect.objectContaining({ orderId: 'order-group-1', totalAmount: 200 }),
-      );
-      expect(result).toEqual({ result: mockResult, paymentUrl: null });
+      expect(mailJob.sendOrderConfirmation).toHaveBeenCalled();
+
+      expect(result).toEqual({ result: mockOrderGroup, paymentUrl: null });
     });
 
     it('should checkout successfully with VNPAY payment', async () => {
-      const paymentUrl = 'http://vnpay.url';
+      // const mockProducts = [
+      //   { id: 'prod-1', price: 100, stock: 10, shopId: 'shop-1', slug: 'prod-1-slug' },
+      // ];
+      // const mockCart = { 'prod-1': '2' };
       const vnpayData = { ...checkoutData, paymentMethod: PaymentMethod.VNPAY };
 
       mockUserRepo.getProfileById.mockResolvedValue(user);
-      mockCartRepo.getAll.mockResolvedValue({ 'prod-1': '1' });
-      mockProductRepo.findProductsForCheckout.mockResolvedValue([
-        { id: 'prod-1', price: 100, stock: 10, shopId: 'shop-1', slug: 'prod-1' },
-      ]);
-      mockOrderRepo.createCheckoutTransaction.mockResolvedValue({ id: 'order-group-2' });
-      (paymentService.createPayment as jest.Mock).mockResolvedValue(paymentUrl);
+      mockCartRepo.getAll.mockResolvedValue(mockCart);
+      mockProductRepo.findProductsForCheckout.mockResolvedValue(mockProducts);
+
+      const mockOrderGroup = { id: 'group-2' };
+      const mockOrder = { id: 'order-1' };
+      mockOrderGroupRepo.createOrderGroup.mockResolvedValue(mockOrderGroup);
+      mockOrderRepo.createOrder.mockResolvedValue(mockOrder);
+
+      const fakePaymentUrl = 'http://vnpay.com/pay';
+      (paymentService.createPayment as jest.Mock).mockResolvedValue(fakePaymentUrl);
 
       const result = await orderService.checkout(userId, ipAddr, vnpayData);
 
-      expect(paymentService.createPayment).toHaveBeenCalled();
-      expect(mockCartRepo.clear).not.toHaveBeenCalled(); // VNPAY chưa thanh toán thì chưa xóa giỏ
-      expect(result).toEqual({ result: { id: 'order-group-2' }, paymentUrl });
+      expect(paymentService.createPayment).toHaveBeenCalledWith({
+        orderGroupId: 'group-2',
+        provider: PaymentMethod.VNPAY,
+        ipAddr,
+      });
+
+      // Đối với thanh toán online, chưa xóa giỏ hàng cho đến khi có Webhook callback thành công
+      expect(mockCartRepo.clear).not.toHaveBeenCalled();
+
+      expect(result).toEqual({ result: mockOrderGroup, paymentUrl: fakePaymentUrl });
     });
   });
 
@@ -271,11 +358,9 @@ describe('OrderService', () => {
     it('should throw error if status transition is invalid', async () => {
       mockOrderRepo.findOrderWithDetails.mockResolvedValue({
         id: orderId,
-        status: OrderStatus.PENDING, // Đã giao xong thì không được chuyển trạng thái nữa
+        status: OrderStatus.PENDING,
         shopId,
       });
-
-      const spy = jest.spyOn(mockOrderRepo, 'updateStatusTransaction');
 
       const promise = orderService.updateOrderStatus(shopId, orderId, OrderStatus.SHIPPING);
 
@@ -283,27 +368,114 @@ describe('OrderService', () => {
       await expect(promise).rejects.toMatchObject({
         statusCode: StatusCodes.BAD_REQUEST,
       });
-      expect(spy).not.toHaveBeenCalled();
+      expect(mockTxManager.run).not.toHaveBeenCalled();
     });
 
-    it('should call updateStatusTransaction successfully', async () => {
+    it('should update status successfully for basic transition (PENDING -> CONFIRMED)', async () => {
       const mockOrder = {
         id: orderId,
         status: OrderStatus.PENDING,
         shopId,
       };
       mockOrderRepo.findOrderWithDetails.mockResolvedValue(mockOrder);
-      mockOrderRepo.updateStatusTransaction.mockResolvedValue({
+      mockOrderRepo.updateStatus.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.CONFIRMED,
       });
 
-      await orderService.updateOrderStatus(shopId, orderId, OrderStatus.CONFIRMED);
+      const result = await orderService.updateOrderStatus(shopId, orderId, OrderStatus.CONFIRMED);
 
-      expect(mockOrderRepo.updateStatusTransaction).toHaveBeenCalledWith(
-        orderId,
-        mockOrder,
-        OrderStatus.CONFIRMED,
+      expect(mockTxManager.run).toHaveBeenCalled();
+      expect(mockOrderRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith(orderId, OrderStatus.CONFIRMED);
+      expect(result.status).toBe(OrderStatus.CONFIRMED);
+    });
+
+    it('should rollback stock and create refund transaction when CANCELLED', async () => {
+      const mockOrder = {
+        id: orderId,
+        status: OrderStatus.PENDING,
+        shopId,
+        orderItems: [
+          { productId: 'product-01', quantity: 1 },
+          { productId: 'product-02', quantity: 2 },
+        ],
+      };
+      mockOrderRepo.findOrderWithDetails.mockResolvedValue(mockOrder);
+      mockOrderRepo.updateStatus.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.CANCELLED,
+      });
+
+      const result = await orderService.updateOrderStatus(shopId, orderId, OrderStatus.CANCELLED);
+
+      expect(mockTxManager.run).toHaveBeenCalled();
+      expect(mockOrderRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith(orderId, OrderStatus.CANCELLED);
+      expect(mockProductRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('should throw error if checkAndCompleteOrderGroup finds no orders', async () => {
+      const mockOrder = {
+        id: orderId,
+        status: OrderStatus.SHIPPING,
+        shopId,
+        orderItems: [
+          { productId: 'product-01', quantity: 1 },
+          { productId: 'product-02', quantity: 2 },
+        ],
+        orderGroup: {
+          paymentMethod: PaymentMethod.COD,
+        },
+        totalAmount: 500000,
+      };
+      mockOrderRepo.findOrderWithDetails.mockResolvedValue(mockOrder);
+      mockOrderRepo.updateStatus.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.DELIVERED,
+      });
+      // Giả lập database trả về mảng rỗng (lỗi dữ liệu mồ côi)
+      mockOrderRepo.findStatusesByGroupId.mockResolvedValue([]);
+
+      const promise = orderService.updateOrderStatus(shopId, orderId, OrderStatus.DELIVERED);
+
+      await expect(promise).rejects.toThrow(AppError);
+      await expect(promise).rejects.toMatchObject({
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+      expect(mockOrderGroupRepo.updatePaymentStatus).not.toHaveBeenCalled();
+    });
+
+    it('should handle payout and complete group when DELIVERED with COD', async () => {
+      const mockOrder = {
+        id: orderId,
+        status: OrderStatus.SHIPPING,
+        shopId,
+        orderItems: [
+          { productId: 'product-01', quantity: 1 },
+          { productId: 'product-02', quantity: 2 },
+        ],
+        orderGroup: {
+          paymentMethod: PaymentMethod.COD,
+        },
+        totalAmount: 500000,
+      };
+      mockOrderRepo.findOrderWithDetails.mockResolvedValue(mockOrder);
+      mockOrderRepo.updateStatus.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.DELIVERED,
+      });
+      mockOrderRepo.findStatusesByGroupId.mockResolvedValue([{ status: OrderStatus.DELIVERED }]);
+
+      await orderService.updateOrderStatus(shopId, orderId, OrderStatus.DELIVERED);
+
+      expect(mockTxManager.run).toHaveBeenCalled();
+      expect(mockOrderRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockOrderRepo.updatePayoutStatus).toHaveBeenCalledWith(orderId, PayoutStatus.PAID_OUT);
+      expect(mockShopRepo.incrementBalance).toHaveBeenCalledWith(
+        mockOrder.shopId,
+        Number(mockOrder.totalAmount),
       );
     });
   });

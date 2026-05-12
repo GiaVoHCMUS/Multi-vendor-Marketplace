@@ -52,7 +52,7 @@ describe('AdminService', () => {
     };
 
     mockTxManager = {
-      run: jest.fn().mockImplementation(async (fn) => await fn('fake-prisma-transaction-client')),
+      run: jest.fn().mockImplementation(async (fn) => await fn('fake-tx-client')),
     };
 
     adminService = new AdminService(mockShopRepo, mockUserRepo, mockOrderRepo, mockTxManager);
@@ -104,8 +104,8 @@ describe('AdminService', () => {
       const result = await adminService.approveShop(mockShopId);
 
       expect(mockTxManager.run).toHaveBeenCalled();
-      expect(mockShopRepo.useTransaction).toHaveBeenCalledWith('fake-prisma-transaction-client');
-      expect(mockUserRepo.useTransaction).toHaveBeenCalledWith('fake-prisma-transaction-client');
+      expect(mockShopRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
+      expect(mockUserRepo.useTransaction).toHaveBeenCalledWith('fake-tx-client');
 
       // Kiểm tra các hàm update được gọi với đúng data
       expect(mockShopRepo.updateShopStatus).toHaveBeenCalledWith(mockShopId, ShopStatus.ACTIVE);
