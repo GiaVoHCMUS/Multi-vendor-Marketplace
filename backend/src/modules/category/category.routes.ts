@@ -1,6 +1,6 @@
 import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
 import { Router } from 'express';
-import { categoryController } from './category.controller';
+import { categoryController } from './category.module';
 import { upload } from '@/shared/middleware/upload.middleware';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { categorySchema } from './category.schema';
@@ -25,10 +25,6 @@ router.patch(
   validate(categorySchema.update),
   catchAsync(categoryController.update),
 );
-router.delete(
-  '/:id',
-  validate(categorySchema.delete),
-  catchAsync(categoryController.delete),
-);
+router.delete('/:id', validate(categorySchema.delete), catchAsync(categoryController.delete));
 
 export default router;

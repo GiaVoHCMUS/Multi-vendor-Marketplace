@@ -4,7 +4,7 @@ import { CreateCategoryInput } from './category.type';
 import { ImageType } from '@/shared/types/image.type';
 import { slugHelper } from '@/shared/utils/slug';
 
-class CategoryRepository extends BaseRepository<
+export class CategoryRepository extends BaseRepository<
   Category,
   Prisma.CategoryCreateInput,
   Prisma.CategoryUpdateInput,
@@ -58,5 +58,3 @@ class CategoryRepository extends BaseRepository<
     return this.delete(id);
   }
 }
-
-export const categoryRepository = new CategoryRepository();

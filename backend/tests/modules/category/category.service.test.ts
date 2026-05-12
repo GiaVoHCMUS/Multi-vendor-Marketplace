@@ -1,22 +1,21 @@
-import { categoryService } from '@/modules/category/category.service';
-import { categoryRepository } from '@/modules/category/category.repository';
 import { cacheService } from '@/shared/services/cache.service';
 import { CACHE_KEYS } from '@/shared/constants/cache.constants';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { AppError } from '@/shared/utils/AppError';
 import { slugHelper } from '@/shared/utils/slug';
+import { CategoryService } from '@/modules/category/category.service';
 
-jest.mock('@/modules/category/category.repository', () => ({
-  categoryRepository: {
-    getAll: jest.fn(),
-    getBySlug: jest.fn(),
-    findById: jest.fn(),
-    createCategoryById: jest.fn(),
-    updateCategoryById: jest.fn(),
-    deleteCategoryById: jest.fn(),
-  },
-}));
+// jest.mock('@/modules/category/category.repository', () => ({
+//   categoryRepository: {
+//     getAll: jest.fn(),
+//     getBySlug: jest.fn(),
+//     findById: jest.fn(),
+//     createCategoryById: jest.fn(),
+//     updateCategoryById: jest.fn(),
+//     deleteCategoryById: jest.fn(),
+//   },
+// }));
 
 jest.mock('@/shared/services/cache.service', () => ({
   cacheService: {
@@ -34,6 +33,9 @@ jest.mock('@/shared/utils/slug', () => ({
 }));
 
 describe('categoryService', () => {
+  let mockCategoryRepo: any;
+  let categoryService: CategoryService;
+
   const categoryId1 = 1;
   const mockCategory1 = {
     id: categoryId1,
@@ -54,11 +56,24 @@ describe('categoryService', () => {
     parentId: null,
   };
 
+  beforeEach(() => {
+    mockCategoryRepo = {
+      getAll: jest.fn(),
+      getBySlug: jest.fn(),
+      findById: jest.fn(),
+      createCategoryById: jest.fn(),
+      updateCategoryById: jest.fn(),
+      deleteCategoryById: jest.fn(),
+    };
+
+    categoryService = new CategoryService(mockCategoryRepo);
+  });
+
   describe('getAll()', () => {
     it('should retrieve categories from cache or repo with versioning', async () => {
       const version = '1';
       (cacheService.getTracker as jest.Mock).mockResolvedValue(version);
-      (categoryRepository.getAll as jest.Mock).mockResolvedValue([mockCategory1, mockCategory2]);
+      mockCategoryRepo.getAll.mockResolvedValue([mockCategory1, mockCategory2]);
 
       const result = await categoryService.getAll();
 
@@ -69,16 +84,16 @@ describe('categoryService', () => {
 
   describe('getBySlug()', () => {
     it('should return category when slug exists', async () => {
-      (categoryRepository.getBySlug as jest.Mock).mockResolvedValue(mockCategory1);
+      mockCategoryRepo.getBySlug.mockResolvedValue(mockCategory1);
 
       const result = await categoryService.getBySlug('electronics 1');
 
-      expect(categoryRepository.getBySlug).toHaveBeenCalledWith('electronics 1');
+      expect(mockCategoryRepo.getBySlug).toHaveBeenCalledWith('electronics 1');
       expect(result).toEqual(mockCategory1);
     });
 
     it('should throw AppError 404 when slug not found', async () => {
-      (categoryRepository.getBySlug as jest.Mock).mockResolvedValue(null);
+      mockCategoryRepo.getBySlug.mockResolvedValue(null);
 
       const promise = categoryService.getBySlug('non-exist');
 
@@ -93,11 +108,11 @@ describe('categoryService', () => {
   describe('create()', () => {
     it('should create category and invalidate list version', async () => {
       const createData = { name: 'New Category' };
-      (categoryRepository.createCategoryById as jest.Mock).mockResolvedValue(mockCategory1);
+      mockCategoryRepo.createCategoryById.mockResolvedValue(mockCategory1);
 
       await categoryService.create(createData);
 
-      expect(categoryRepository.createCategoryById).toHaveBeenCalledWith(createData, undefined);
+      expect(mockCategoryRepo.createCategoryById).toHaveBeenCalledWith(createData, undefined);
       expect(cacheService.invalidateTracker).toHaveBeenCalledWith(CACHE_KEYS.CATEGORY.TRACKER_LIST);
     });
   });
@@ -106,16 +121,16 @@ describe('categoryService', () => {
     const updateInput = { name: 'Updated Name' };
 
     it('should update category, delete old slug cache and invalidate list', async () => {
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(mockCategory1);
+      mockCategoryRepo.findById.mockResolvedValue(mockCategory1);
       (slugHelper.generate as jest.Mock).mockReturnValue(mockCategory1.slug);
-      (categoryRepository.updateCategoryById as jest.Mock).mockResolvedValue({
+      mockCategoryRepo.updateCategoryById.mockResolvedValue({
         ...mockCategory1,
         name: 'Updated Name',
       });
 
       await categoryService.update(categoryId1, updateInput, undefined);
 
-      expect(categoryRepository.updateCategoryById).toHaveBeenCalledWith(categoryId1, {
+      expect(mockCategoryRepo.updateCategoryById).toHaveBeenCalledWith(categoryId1, {
         ...mockCategory1,
         id: undefined,
         name: 'Updated Name',
@@ -128,7 +143,7 @@ describe('categoryService', () => {
     });
 
     it('should throw 404 if category to update does not exist', async () => {
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(null);
+      mockCategoryRepo.findById.mockResolvedValue(null);
 
       const promise = categoryService.update(categoryId1, updateInput);
 
@@ -138,8 +153,8 @@ describe('categoryService', () => {
 
     it('should use new image data when imageUrl is provided', async () => {
       // Bối cảnh: Có Category cũ và truyền vào ảnh mới
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(mockCategory1);
-      (categoryRepository.updateCategoryById as jest.Mock).mockResolvedValue({
+      mockCategoryRepo.findById.mockResolvedValue(mockCategory1);
+      mockCategoryRepo.updateCategoryById.mockResolvedValue({
         ...mockCategory1,
         imageUrl: 'new-url.png',
         imagePublicId: 'new-id',
@@ -150,7 +165,7 @@ describe('categoryService', () => {
       await categoryService.update(categoryId1, { name: mockCategory1.name }, newImage);
 
       // Kiểm tra: Repository phải nhận được url và publicId MỚI
-      expect(categoryRepository.updateCategoryById).toHaveBeenCalledWith(mockCategory1.id, {
+      expect(mockCategoryRepo.updateCategoryById).toHaveBeenCalledWith(mockCategory1.id, {
         ...mockCategory1,
         id: undefined,
         imageUrl: newImage.url,
@@ -162,19 +177,19 @@ describe('categoryService', () => {
     });
 
     it('should use existing data when update input fields are missing (branch coverage)', async () => {
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(mockCategory1);
+      mockCategoryRepo.findById.mockResolvedValue(mockCategory1);
 
       // 2. Input rỗng
       const emptyUpdateInput = {};
       const noImage = undefined;
 
-      (categoryRepository.updateCategoryById as jest.Mock).mockResolvedValue({ ...mockCategory1 });
+      mockCategoryRepo.updateCategoryById.mockResolvedValue({ ...mockCategory1 });
 
       await categoryService.update(1, emptyUpdateInput, noImage);
 
       // 3. Kiểm tra xem Repository có nhận được ĐÚNG dữ liệu cũ hay không
       // Đây là lúc test các nhánh "category.name", "category.slug", v.v...
-      expect(categoryRepository.updateCategoryById).toHaveBeenCalledWith(1, {
+      expect(mockCategoryRepo.updateCategoryById).toHaveBeenCalledWith(1, {
         name: mockCategory1.name,
         slug: mockCategory1.slug,
         imageUrl: mockCategory1.imageUrl,
@@ -190,7 +205,7 @@ describe('categoryService', () => {
 
   describe('delete()', () => {
     it('should delete category, remove slug cache and invalidate list', async () => {
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(mockCategory1);
+      mockCategoryRepo.findById.mockResolvedValue(mockCategory1);
 
       await categoryService.delete(categoryId1);
 
@@ -198,11 +213,11 @@ describe('categoryService', () => {
         CACHE_KEYS.CATEGORY.SLUG(mockCategory1.slug),
       );
       expect(cacheService.invalidateTracker).toHaveBeenCalledWith(CACHE_KEYS.CATEGORY.TRACKER_LIST);
-      expect(categoryRepository.deleteCategoryById).toHaveBeenCalledWith(categoryId1);
+      expect(mockCategoryRepo.deleteCategoryById).toHaveBeenCalledWith(categoryId1);
     });
 
     it('should throw 404 if category to delete does not exist', async () => {
-      (categoryRepository.findById as jest.Mock).mockResolvedValue(null);
+      mockCategoryRepo.findById.mockResolvedValue(null);
 
       const promise = categoryService.delete(categoryId1);
 
@@ -212,7 +227,7 @@ describe('categoryService', () => {
         message: MESSAGE.CATEGORY.NOT_FOUND,
       });
       expect(cacheService.delete).not.toHaveBeenCalled();
-      expect(categoryRepository.deleteCategoryById).not.toHaveBeenCalled();
+      expect(mockCategoryRepo.deleteCategoryById).not.toHaveBeenCalled();
     });
   });
 });
