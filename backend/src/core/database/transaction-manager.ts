@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 
-export class TransactionManger {
+export class TransactionManager {
   constructor(private readonly prisma: PrismaClient) {}
 
   async run<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
