@@ -31,6 +31,86 @@ export type OrderWithDetails = Prisma.OrderGetPayload<{
   };
 }>;
 
+export const userOrderDetailSelect = Prisma.validator<Prisma.OrderSelect>()({
+  id: true,
+  orderGroupId: true,
+  totalAmount: true,
+  status: true,
+  updatedAt: true,
+  shop: { select: { id: true, ownerId: true, name: true, slug: true, logoUrl: true } },
+  orderItems: {
+    select: {
+      id: true,
+      quantity: true,
+      priceAtPurchase: true,
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          price: true,
+          images: { select: { id: true, url: true, order: true } },
+        },
+      },
+    },
+  },
+  orderGroup: {
+    select: {
+      paymentStatus: true,
+      paymentMethod: true,
+      shippingName: true,
+      shippingPhone: true,
+      shippingAddress: true,
+      updatedAt: true,
+    },
+  },
+  transactions: true,
+});
+
+export type UserOrderRawPayload = Prisma.OrderGetPayload<{
+  select: typeof userOrderDetailSelect;
+}>;
+
+export const orderListSelect = Prisma.validator<Prisma.OrderSelect>()({
+  id: true,
+  orderGroupId: true,
+  shopId: true,
+  totalAmount: true,
+  status: true,
+  payoutStatus: true,
+  payoutAt: true,
+  shop: { select: { id: true, name: true, slug: true } },
+  orderItems: {
+    select: {
+      id: true,
+      productId: true,
+      quantity: true,
+      priceAtPurchase: true,
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          price: true,
+          images: { take: 1, select: { id: true, url: true } },
+        },
+      },
+    },
+  },
+  orderGroup: {
+    select: {
+      shippingAddress: true,
+      shippingName: true,
+      shippingPhone: true,
+    },
+  },
+});
+
+// 2. Tạo Type từ biến trên
+export type OrderListRawPayload = Prisma.OrderGetPayload<{
+  select: typeof orderListSelect;
+}>;
+
 export class OrderRepository extends BaseRepository<
   Order,
   Prisma.OrderCreateInput | Prisma.OrderUncheckedCreateInput,
@@ -42,113 +122,14 @@ export class OrderRepository extends BaseRepository<
     super('order');
   }
 
-  // Khai báo sẵn các trường cần Select để tái sử dụng và code gọn hơn
-  private orderSelect: Prisma.OrderSelect = {
-    id: true,
-    orderGroupId: true,
-    shopId: true,
-    totalAmount: true,
-    status: true,
-    payoutStatus: true,
-    payoutAt: true,
-
-    shop: { select: { id: true, name: true, slug: true } },
-
-    orderItems: {
-      select: {
-        id: true,
-        productId: true,
-        quantity: true,
-        priceAtPurchase: true,
-        product: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            price: true,
-            images: { take: 1, select: { id: true, url: true } },
-          },
-        },
-      },
-    },
-
-    orderGroup: {
-      select: {
-        shippingAddress: true,
-        shippingName: true,
-        shippingPhone: true,
-      },
-    },
-  };
-
   /**
    * Lấy chi tiết một đơn hàng kèm theo các relation (Shop, Items, Group, ...)
    */
-  async findOrderDetail(userId: string, orderId: string) {
+  async findForUserDetail(userId: string, orderId: string) {
     return this.findOne(
-      {
-        id: orderId,
-        orderGroup: { userId },
-      },
-      {
-        select: {
-          id: true,
-          orderGroupId: true,
-          totalAmount: true,
-          status: true,
-          updatedAt: true,
-
-          shop: {
-            select: {
-              id: true,
-              ownerId: true,
-              name: true,
-              slug: true,
-              logoUrl: true,
-            },
-          },
-
-          orderItems: {
-            select: {
-              id: true,
-              quantity: true,
-              priceAtPurchase: true,
-
-              product: {
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-
-                  images: {
-                    select: {
-                      id: true,
-                      url: true,
-                      order: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-
-          orderGroup: {
-            select: {
-              paymentStatus: true,
-              paymentMethod: true,
-
-              shippingName: true,
-              shippingPhone: true,
-              shippingAddress: true,
-
-              updatedAt: true,
-            },
-          },
-
-          transactions: true,
-        },
-      },
-    );
+      { id: orderId, orderGroup: { userId } },
+      { select: userOrderDetailSelect },
+    ) as Promise<UserOrderRawPayload | null>;
   }
 
   /**
@@ -162,7 +143,7 @@ export class OrderRepository extends BaseRepository<
         orderGroup: { userId },
       }))
       .sort()
-      .select(this.orderSelect);
+      .select(orderListSelect);
 
     const { prismaArgs, meta } = queryHelper.build();
 
@@ -172,7 +153,7 @@ export class OrderRepository extends BaseRepository<
       prismaOrder.findMany({
         ...prismaArgs,
         orderBy: prismaArgs.orderBy ?? { createdAt: 'desc' },
-      }),
+      }) as unknown as Promise<OrderListRawPayload[]>,
 
       prismaOrder.count({ where: prismaArgs.where }),
     ]);

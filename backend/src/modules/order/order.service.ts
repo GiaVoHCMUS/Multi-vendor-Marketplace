@@ -180,8 +180,21 @@ export class OrderService {
       throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, StatusCodes.BAD_REQUEST);
     }
 
+    const formattedOrders = orders.map((order) => ({
+      ...order,
+      orderItems: order.orderItems.map((item) => ({
+        id: item.id,
+        productId: item.product.id,
+        productSlug: item.product.slug,
+        productName: item.product.name,
+        productImage: item.product.images?.[0].url,
+        productQuantity: item.quantity,
+        productPriceAtPurchase: item.priceAtPurchase,
+      })),
+    }));
+
     return {
-      orders,
+      formattedOrders,
       meta: buildOffsetMeta({
         totalItems: total,
         page: meta.page,
@@ -192,13 +205,26 @@ export class OrderService {
 
   // Xem chi tiết từng đơn hàng
   getOrderDetail = async (userId: string, orderId: string) => {
-    const order = await this.orderRepo.findOrderDetail(userId, orderId);
+    const order = await this.orderRepo.findForUserDetail(userId, orderId);
 
     if (!order) {
       throw new AppError(MESSAGE.ORDER.NOT_FOUND, StatusCodes.NOT_FOUND);
     }
 
-    return order;
+    const formattedOrder = {
+      ...order,
+      orderItems: order.orderItems.map((item) => ({
+        id: item.id,
+        productId: item.product.id,
+        productSlug: item.product.slug,
+        productName: item.product.name,
+        productImage: item.product.images?.[0]?.url || null,
+        productQuantity: item.quantity,
+        productPriceAtPurchase: item.priceAtPurchase,
+      })),
+    };
+
+    return formattedOrder;
   };
 
   /**
@@ -220,10 +246,7 @@ export class OrderService {
 
     // 3. Nếu cthoar mãn, cập nhật trạng thái OrderGroup
     if (allDelivered) {
-      await orderGroupRepoTx.updatePaymentStatus(
-        orderGroupId,
-        PaymentStatus.COMPLETED,
-      );
+      await orderGroupRepoTx.updatePaymentStatus(orderGroupId, PaymentStatus.COMPLETED);
     }
   };
 

@@ -17,7 +17,9 @@ export class OrderController {
   };
 
   getMyOrders = async (req: Request, res: Response) => {
-    const { orders, meta } = await this.orderService.getMyOrders(req.user!.id, req.query);
+    const result = await this.orderService.getMyOrders(req.user!.id, req.query);
+    const meta = result.meta;
+    const orders = result.formattedOrders;
 
     successResponse(res, StatusCodes.OK, MESSAGE.ORDER.GET_LIST_SUCCESS, orders, meta);
   };

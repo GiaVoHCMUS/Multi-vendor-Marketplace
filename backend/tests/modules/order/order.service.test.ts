@@ -3,12 +3,7 @@ import { OrderService } from '@/modules/order/order.service';
 import { paymentService } from '@/modules/payment/payment.service';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { AppError } from '@/shared/utils/AppError';
-import {
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-  PayoutStatus,
-} from '@prisma/client';
+import { OrderStatus, PaymentMethod, PaymentStatus, PayoutStatus } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 
 jest.mock('@/jobs/mail/mail.job', () => ({
@@ -57,7 +52,7 @@ describe('OrderService', () => {
     mockOrderRepo = {
       useTransaction: jest.fn().mockReturnThis(),
       findOrderList: jest.fn(),
-      findOrderDetail: jest.fn(),
+      findForUserDetail: jest.fn(),
       findOrderWithDetails: jest.fn(),
       updateStatus: jest.fn(),
       updatePayoutStatus: jest.fn(),
@@ -284,21 +279,42 @@ describe('OrderService', () => {
 
     it('should return orders with correct meta', async () => {
       mockOrderRepo.findOrderList.mockResolvedValue({
-        orders: [{ id: 'order-1' }],
+        orders: [
+          {
+            id: 'order-01',
+            totalAmount: '50000000',
+            status: 'DELIVERED',
+            payoutStatus: 'PENDING',
+            payoutAt: null,
+            orderItems: [
+              {
+                id: '653f04d6-857f-4304-a0f4-df48498aa043',
+                quantity: 5,
+                priceAtPurchase: '10000000',
+                product: {
+                  id: 'product-01',
+                  slug: 'product-01-4798c8',
+                  name: 'Product 01',
+                  image: ['http://image-order-01']
+                }
+              },
+            ],
+          },
+        ],
         total: 1,
         meta: { type: 'offset', page: 1, limit: 10 },
       });
 
       const result = await orderService.getMyOrders('user-1', {});
 
-      expect(result.orders).toHaveLength(1);
+      expect(result.formattedOrders).toHaveLength(1);
       expect(result.meta.limit).toBe(10);
     });
   });
 
   describe('getOrderDetail()', () => {
     it('should throw error if order is not found', async () => {
-      mockOrderRepo.findOrderDetail.mockResolvedValue(null);
+      mockOrderRepo.findForUserDetail.mockResolvedValue(null);
       const promise = orderService.getOrderDetail('user-1', 'oder-1');
 
       expect(promise).rejects.toThrow(AppError);
@@ -309,12 +325,26 @@ describe('OrderService', () => {
     });
 
     it('should return detail order successfully', async () => {
-      mockOrderRepo.findOrderDetail.mockResolvedValue({
+      mockOrderRepo.findForUserDetail.mockResolvedValue({
         id: 'order-1',
-        orderGroupId: 'order-group-1',
-        status: OrderStatus.PENDING,
         totalAmount: 5000000,
-      });
+        status: 'PENDING',
+        payoutStatus: 'PENDING',
+        payoutAt: null,
+        orderItems: [
+          {
+            id: '653f04d6-857f-4304-a0f4-df48498aa043',
+            quantity: 5,
+            priceAtPurchase: '10000000',
+            product: {
+              id: 'product-01',
+              slug: 'product-01-4798c8',
+              name: 'Product 01',
+              image: ['http://image-order-01'],
+            },
+          },
+        ],
+      });        
 
       const result = await orderService.getOrderDetail('user-1', 'order-1');
 
