@@ -61,15 +61,23 @@ export const commonRules = {
     .min(5, { message: 'Tên cửa hàng là quá ngắn' })
     .max(255, { message: 'Tên cửa hàng quá dài' }),
 
-  shopDescription: z
-    .string()
-    .max(1000, { message: 'Mô tả về cửa hàng quá dài' })
-    .optional(),
+  shopDescription: z.string().max(1000, { message: 'Mô tả về cửa hàng quá dài' }).optional(),
 
   // Pagination cho Prisma
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
-  cursor: z.string().pipe(z.uuid({ message: 'ID không đúng định dạng UUID' })).optional(),
+  page: z.coerce
+    .number({ message: 'Trang phải là một con số' })
+    .int({ message: 'Trang phải là số nguyên' })
+    .positive({ message: 'Trang phải là số nguyên dương' })
+    .default(1),
+  limit: z.coerce
+    .number({ message: 'Trang phải là một con số' })
+    .int({ message: 'Trang phải là số nguyên' })
+    .positive({ message: 'Trang phải là số nguyên dương' })
+    .default(10),
+  cursor: z
+    .string()
+    .pipe(z.uuid({ message: 'ID không đúng định dạng UUID' }))
+    .optional(),
 };
 
 export const categoryRules = {

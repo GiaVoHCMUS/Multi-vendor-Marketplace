@@ -35,6 +35,8 @@ export const shopSchema = {
     body: emptySchema,
     query: z
       .object({
+        page: commonRules.page,
+        limit: commonRules.limit,
         status: z.enum(OrderStatus).optional(),
         fromDate: z
           .string()
