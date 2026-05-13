@@ -39,7 +39,7 @@ describe('CartService', () => {
 
       const result = await cartService.getCart(userId);
 
-      expect(result).toEqual({ items: [], totalItems: 0 });
+      expect(result).toEqual({ items: [], totalItems: 0, totalAmount: 0 });
       expect(mockCartRepo.getAll).toHaveBeenCalledWith(userId);
       expect(mockProductRepo.findPublishedByIds).not.toHaveBeenCalled();
     });

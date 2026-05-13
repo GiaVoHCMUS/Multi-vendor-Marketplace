@@ -20,21 +20,24 @@ export class CartService {
     }));
 
     if (cartItems.length === 0) {
-      return { items: [], totalItems: 0 };
+      return { items: [], totalItems: 0, totalAmount: 0 };
     }
 
     // Lấy Product Information
     const productIds = cartItems.map((i) => i.productId);
 
+    // const products = await this.productRepo.findPublishedByIds(productIds);
     const products = await this.productRepo.findPublishedByIds(productIds);
-
     const productMap = new Map(products.map((p) => [p.id, p]));
+    let totalAmount: number = 0;
 
     const populatedItems = cartItems
       .map((item) => {
         const product = productMap.get(item.productId);
-
         if (!product) return null;
+
+        const subTotal = Number(product.price) * item.quantity;
+        totalAmount += subTotal;
 
         return {
           productId: product.id,
@@ -43,15 +46,17 @@ export class CartService {
           price: product.price,
           stock: product.stock,
           quantity: item.quantity,
+          subTotal,
           image: product.images[0]?.url ?? null,
           shop: product.shop,
+          isAvailable: item.quantity <= product.stock,
         };
       })
       .filter((item) => item !== null);
 
     const totalItems = populatedItems.reduce((acc, item) => acc + item.quantity, 0);
 
-    return { items: populatedItems, totalItems };
+    return { items: populatedItems, totalItems, totalAmount: Number(totalAmount.toFixed(2)) };
   }
 
   async addToCart(userId: string, item: AddToCartInput) {
