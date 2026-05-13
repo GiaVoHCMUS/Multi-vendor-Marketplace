@@ -12,13 +12,8 @@ export class UserController {
   getMe = async (req: Request, res: Response) => {
     // Lấy thông tin cá nhân
     const user = await this.userService.getMe(req.user!.id);
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.USER.GET_PROFILE_SUCCESS,
-      user,
-    );
-  }
+    successResponse(res, StatusCodes.OK, MESSAGE.USER.GET_PROFILE_SUCCESS, user);
+  };
 
   updateMe = async (req: Request, res: Response) => {
     // Cập nhật Profile
@@ -29,35 +24,20 @@ export class UserController {
       avatarUrl = image;
     }
     const user = await this.userService.updateMe(req.user!.id, req.body, avatarUrl);
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.USER.UPDATE_PROFILE_SUCCESS,
-      user,
-    );
-  }
+    successResponse(res, StatusCodes.OK, MESSAGE.USER.UPDATE_PROFILE_SUCCESS, user);
+  };
 
   getAddresses = async (req: Request, res: Response) => {
     // Lấy danh sách địa chỉ (có dùng caching)
     const list = await this.userService.getAddresses(req.user!.id);
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.USER.GET_ADDRESS_LIST_SUCCESS,
-      list,
-    );
-  }
+    successResponse(res, StatusCodes.OK, MESSAGE.USER.GET_ADDRESS_LIST_SUCCESS, list);
+  };
 
   createAddress = async (req: Request, res: Response) => {
     // Tạo địa chỉ mới
     const address = await this.userService.createAddress(req.user!.id, req.body);
-    successResponse(
-      res,
-      StatusCodes.CREATED,
-      MESSAGE.USER.ADD_ADDRESS_SUCCESS,
-      address,
-    );
-  }
+    successResponse(res, StatusCodes.CREATED, MESSAGE.USER.ADD_ADDRESS_SUCCESS, address);
+  };
 
   updateAddress = async (req: Request, res: Response) => {
     // Cập nhật địa chỉ
@@ -66,17 +46,12 @@ export class UserController {
       req.params.id as string,
       req.body,
     );
-    successResponse(
-      res,
-      StatusCodes.OK,
-      MESSAGE.USER.UPDATE_ADDRESS_SUCCESS,
-      address,
-    );
-  }
+    successResponse(res, StatusCodes.OK, MESSAGE.USER.UPDATE_ADDRESS_SUCCESS, address);
+  };
 
   deleteAddress = async (req: Request, res: Response) => {
     // Xóa địa chỉ
     await this.userService.deleteAddress(req.user!.id, req.params.id as string);
     successResponse(res, StatusCodes.OK, MESSAGE.USER.DELETE_ADDRESS_SUCCESS);
-  }
-};
+  };
+}

@@ -5,10 +5,7 @@ export const userSchema = {
   updateMe: z.object({
     body: z.object({
       fullName: commonRules.fullName.optional(),
-      bio: z
-        .string()
-        .max(500, { message: 'Bio không được dài quá 500 ký tự' })
-        .optional(),
+      bio: z.string().max(500, { message: 'Bio không được dài quá 500 ký tự' }).optional(),
     }),
     query: emptySchema,
     params: emptySchema,

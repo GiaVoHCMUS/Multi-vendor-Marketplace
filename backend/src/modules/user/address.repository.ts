@@ -31,10 +31,7 @@ export class AddressRepository extends BaseRepository<
   }
 
   async findAddressByUserId(addressId: string, userId: string) {
-    return this.findOne(
-      { id: addressId, userId },
-      { omit: { createdAt: true, userId: true } },
-    );
+    return this.findOne({ id: addressId, userId }, { omit: { createdAt: true, userId: true } });
   }
 
   async clearDefaultStatus(userId: string) {
