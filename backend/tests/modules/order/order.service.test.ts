@@ -262,6 +262,8 @@ describe('OrderService', () => {
   });
 
   describe('getMyOrders', () => {
+    const query = { page: 1, limit: 10 };
+
     it('should throw error if meta type is not offset', async () => {
       mockOrderRepo.findOrderList.mockResolvedValue({
         orders: [],
@@ -269,7 +271,7 @@ describe('OrderService', () => {
         meta: { type: 'cursor' },
       });
 
-      const promise = orderService.getMyOrders('user-1', {});
+      const promise = orderService.getMyOrders('user-1', query);
 
       await expect(promise).rejects.toThrow(AppError);
       await expect(promise).rejects.toMatchObject({
@@ -295,8 +297,8 @@ describe('OrderService', () => {
                   id: 'product-01',
                   slug: 'product-01-4798c8',
                   name: 'Product 01',
-                  image: ['http://image-order-01']
-                }
+                  image: ['http://image-order-01'],
+                },
               },
             ],
           },
@@ -305,7 +307,7 @@ describe('OrderService', () => {
         meta: { type: 'offset', page: 1, limit: 10 },
       });
 
-      const result = await orderService.getMyOrders('user-1', {});
+      const result = await orderService.getMyOrders('user-1', query);
 
       expect(result.formattedOrders).toHaveLength(1);
       expect(result.meta.limit).toBe(10);
@@ -344,7 +346,7 @@ describe('OrderService', () => {
             },
           },
         ],
-      });        
+      });
 
       const result = await orderService.getOrderDetail('user-1', 'order-1');
 
@@ -512,6 +514,7 @@ describe('OrderService', () => {
 
   describe('getShopOrder()', () => {
     const shopId = 'shop-1';
+    const query = { page: 1, limit: 10 };
 
     it('should throw error if meta type is not offset', async () => {
       mockOrderRepo.findShopOrders.mockResolvedValue({
@@ -520,7 +523,7 @@ describe('OrderService', () => {
         meta: { type: 'cursor' }, // Sai kiểu phân trang
       });
 
-      const promise = orderService.getShopOrders(shopId, {});
+      const promise = orderService.getShopOrders(shopId, query);
 
       await expect(promise).rejects.toThrow(AppError);
       await expect(promise).rejects.toMatchObject({
@@ -535,12 +538,12 @@ describe('OrderService', () => {
         meta: { type: 'offset', page: 1, limit: 10 },
       });
 
-      const result = await orderService.getShopOrders(shopId, {});
+      const result = await orderService.getShopOrders(shopId, query);
 
       expect(result.data).toHaveLength(1);
       expect(result.meta.limit).toBe(10);
       expect(result.meta.totalItems).toBe(5);
-      expect(mockOrderRepo.findShopOrders).toHaveBeenCalledWith(shopId, {});
+      expect(mockOrderRepo.findShopOrders).toHaveBeenCalledWith(shopId, query);
     });
   });
 
