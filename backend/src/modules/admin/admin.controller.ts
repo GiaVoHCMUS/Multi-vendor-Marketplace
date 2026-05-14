@@ -3,6 +3,7 @@ import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { AdminService } from './admin.service';
+import { adminSchema } from './admin.schema';
 
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -46,13 +47,15 @@ export class AdminController {
   };
 
   getUsers = async (req: Request, res: Response) => {
-    const result = await this.adminService.getUsers(req.query);
+    const { query } = adminSchema.getUsers.parse(req);
+    const result = await this.adminService.getUsers(query);
 
     successResponse(res, StatusCodes.OK, MESSAGE.ADMIN.GET_USERS_SUCCESS, result.data, result.meta);
   };
 
   getOrders = async (req: Request, res: Response) => {
-    const result = await this.adminService.getOrders(req.query);
+    const { query } = adminSchema.getOrders.parse(req);
+    const result = await this.adminService.getOrders(query);
 
     successResponse(
       res,

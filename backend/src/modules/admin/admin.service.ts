@@ -1,5 +1,5 @@
 import { AppError } from '@/shared/utils/AppError';
-import { PaginationQuery } from './admin.type';
+import { GetOrdersQuery, GetUsersQuery, PaginationQuery } from './admin.type';
 import { buildOffsetMeta } from '@/shared/utils/buildMeta';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { ShopStatus, UserRole } from '@prisma/client';
@@ -112,7 +112,7 @@ export class AdminService {
     };
   }
 
-  async getUsers(queryInput: any) {
+  async getUsers(queryInput: GetUsersQuery) {
     const { users, total, meta } = await this.userRepo.findUsersForAdmin(queryInput);
 
     if (!meta || meta.type !== 'offset') {
@@ -129,7 +129,7 @@ export class AdminService {
     };
   }
 
-  async getOrders(queryInput: any) {
+  async getOrders(queryInput: GetOrdersQuery) {
     const { orders, total, meta } = await this.orderRepo.findOrdersForAdmin(queryInput);
 
     if (!meta || meta.type !== 'offset') {
