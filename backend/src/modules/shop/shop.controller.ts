@@ -6,6 +6,7 @@ import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
 import { ShopService } from './shop.service';
 import { OrderService } from '../order/order.service';
+import { shopSchema } from './shop.schema';
 
 export class ShopController {
   constructor(
@@ -43,9 +44,10 @@ export class ShopController {
   };
 
   getShopOrders = async (req: Request, res: Response) => {
+    const { query } = shopSchema.getShopOrders.parse(req);
     const shop = await this.shopService.getShopByOwner(req.user!.id);
 
-    const { data, meta } = await this.orderService.getShopOrders(shop.id, req.query);
+    const { data, meta } = await this.orderService.getShopOrders(shop.id, query);
 
     successResponse(res, StatusCodes.OK, MESSAGE.SHOP.GET_ORDERS_SUCCESS, data, meta);
   };

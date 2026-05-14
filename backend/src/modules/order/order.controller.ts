@@ -3,6 +3,7 @@ import { OrderService } from './order.service';
 import { successResponse } from '@/shared/utils/response';
 import { MESSAGE } from '@/shared/constants/message.constants';
 import { StatusCodes } from 'http-status-codes';
+import { orderSchema } from './order.schema';
 
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
@@ -17,7 +18,8 @@ export class OrderController {
   };
 
   getMyOrders = async (req: Request, res: Response) => {
-    const result = await this.orderService.getMyOrders(req.user!.id, req.query);
+    const { query } = orderSchema.getMyOrder.parse(req);
+    const result = await this.orderService.getMyOrders(req.user!.id, query);
     const meta = result.meta;
     const orders = result.formattedOrders;
 

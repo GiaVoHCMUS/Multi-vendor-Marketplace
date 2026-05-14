@@ -4,6 +4,7 @@ import { slugHelper } from '@/shared/utils/slug';
 import { Prisma, PrismaClient, Shop, ShopStatus } from '@prisma/client';
 import { RegisterShopInput } from './shop.type';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
+import { PaginationQuery } from '../admin/admin.type';
 
 // Định nghĩa Type Shop kèm Owner bằng GetPayload của Prisma
 export type ShopWithOwner = Prisma.ShopGetPayload<{
@@ -78,7 +79,7 @@ export class ShopRepository extends BaseRepository<
     return this.count({ deletedAt: null });
   }
 
-  async findPendingShops(queryInput: any) {
+  async findPendingShops(queryInput: PaginationQuery) {
     const queryHelper = new PrismaQueryHelper(queryInput)
       .paginate()
       .applyFilter(() => ({

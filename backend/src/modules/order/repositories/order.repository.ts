@@ -8,6 +8,8 @@ import {
   PrismaClient,
 } from '@prisma/client';
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
+import { GetMyOrdersQuery } from '../order.type';
+import { GetOrdersQuery } from '@/modules/admin/admin.type';
 
 export type CheckoutItemPayload = {
   product: {
@@ -135,7 +137,7 @@ export class OrderRepository extends BaseRepository<
   /**
    * Lấy danh sách đơn hàng của User với phân trang (Offset Pagination)
    */
-  async findOrderList(userId: string, queryInput: any) {
+  async findOrderList(userId: string, queryInput: GetMyOrdersQuery) {
     const queryHelper = new PrismaQueryHelper(queryInput)
       .paginate()
       .applyFilter((q) => ({
@@ -300,7 +302,7 @@ export class OrderRepository extends BaseRepository<
    * Truy vấn danh sách đơn hàng dành cho giao diện quản trị (Admin Dashboard)
    * Bao gồm thông tin Shop, User và các sản phẩm đã mua
    */
-  async findOrdersForAdmin(queryInput: any) {
+  async findOrdersForAdmin(queryInput: GetOrdersQuery) {
     const queryHelper = new PrismaQueryHelper(queryInput)
       .paginate()
       .applyFilter((q) => ({

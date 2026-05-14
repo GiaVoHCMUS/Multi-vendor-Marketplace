@@ -1,4 +1,4 @@
-import { CheckoutInput } from './order.type';
+import { CheckoutInput, GetMyOrdersQuery } from './order.type';
 import { AppError } from '@/shared/utils/AppError';
 import {
   OrderStatus,
@@ -25,6 +25,7 @@ import { OrderItemRepository } from './repositories/order-item.repository';
 import { ShopRepository } from '../shop/shop.repository';
 import { TransactionRepository } from '../payment/repositories/transaction.repository';
 import { TransactionClient } from '@/core/database/db-type';
+import { GetShopOrdersQuery } from '../shop/shop.type';
 
 export class OrderService {
   constructor(
@@ -173,7 +174,7 @@ export class OrderService {
   };
 
   // Xem danh sách toàn bộ đơn hàng
-  getMyOrders = async (userId: string, queryInput: any) => {
+  getMyOrders = async (userId: string, queryInput: GetMyOrdersQuery) => {
     const { orders, total, meta } = await this.orderRepo.findOrderList(userId, queryInput);
 
     if (!meta || meta.type !== 'offset') {
@@ -342,7 +343,7 @@ export class OrderService {
     });
   };
 
-  getShopOrders = async (shopId: string, queryInput: any) => {
+  getShopOrders = async (shopId: string, queryInput: GetShopOrdersQuery) => {
     const { orders, total, meta } = await this.orderRepo.findShopOrders(shopId, queryInput);
 
     if (!meta || meta.type !== 'offset') {
