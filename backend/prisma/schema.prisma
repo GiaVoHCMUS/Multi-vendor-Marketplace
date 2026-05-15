@@ -86,7 +86,8 @@ model User {
   orderGroups             OrderGroup[]
   reviews                 Review[]
 
-  @@index([role, deletedAt])
+  @@index([deletedAt, createdAt(sort: Desc)])
+  @@index([role, deletedAt, createdAt(sort: Desc)])
   @@map("users")
 }
 
@@ -127,8 +128,7 @@ model Shop {
   orders        Order[]
   transactions  Transaction[]
 
-  @@index([ownerId, deletedAt])
-  @@index([status, deletedAt])
+  @@index([status, deletedAt, createdAt(sort: Desc)])
   @@map("shops")
 }
 
@@ -171,10 +171,15 @@ model Product {
   reviews       Review[]
   images        ProductImage[]
 
-  @@unique([shopId, slug])
-  @@index([categoryId, price, status])
-  @@index([price, status, deletedAt])
-  @@index([name, status])                
+  // @@unique([shopId, slug])
+  // @@index([categoryId, price, status])
+  // @@index([price, status, deletedAt])
+  // @@index([name, status])    
+  @@index([status, deletedAt, createdAt(sort: Desc), id(sort: Desc)]) 
+  @@index([shopId, status, deletedAt, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([categoryId, status, deletedAt, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([status, deletedAt, price, id(sort: Desc)])
+
   @@map("products")
 }
 
@@ -212,7 +217,9 @@ model OrderGroup {
   user            User          @relation(fields: [userId], references: [id])
   transactions    Transaction[]
 
-  @@index([userId, paymentStatus])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([paymentStatus, createdAt(sort: Desc)])
+
   @@map("order_groups")
 }
 
@@ -234,6 +241,10 @@ model Order {
   orderItems      OrderItem[]
   transactions    Transaction[]
   
+  @@index([shopId, status, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([orderGroupId])
+
   @@map("orders")
 }
 
@@ -248,6 +259,7 @@ model OrderItem {
   product         Product  @relation(fields: [productId], references: [id])
 
   @@index([orderId, productId])
+
   @@map("order_items")
 }
 
@@ -284,9 +296,10 @@ model Transaction {
   order           Order?            @relation(fields: [orderId], references: [id])
   shop            Shop?             @relation(fields: [shopId], references: [id])
 
+  @@index([shopId, createdAt(sort: Desc)])
   @@index([orderGroupId])
   @@index([orderId])
-  @@index([shopId])
+
   @@map("transactions")
 }
 
