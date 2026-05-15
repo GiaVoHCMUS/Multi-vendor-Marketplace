@@ -13,7 +13,7 @@ type PaginationMeta =
       cursorField: string;
     };
 
-type RawQueryInput = Record<string, string | number | undefined>;
+type RawQueryInput = Record<string, string | number | Date | undefined>;
 
 export class PrismaQueryHelper<TWhereInput extends Record<string, any>, TOrderByInput = any> {
   private prismaQuery: {
@@ -134,6 +134,7 @@ export class PrismaQueryHelper<TWhereInput extends Record<string, any>, TOrderBy
     const filterObj = callback(this.rawQuery);
 
     const cleaned = Object.fromEntries(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       Object.entries(filterObj as any).filter(([_, v]) => v !== undefined && v !== ''),
     ) as Partial<TWhereInput>;
 

@@ -10,6 +10,7 @@ import {
 import { PrismaQueryHelper } from '@/shared/query/prisma-query.helper';
 import { GetMyOrdersQuery } from '../order.type';
 import { GetOrdersQuery } from '@/modules/admin/admin.type';
+import { GetShopOrdersQuery } from '@/modules/shop/shop.type';
 
 export type CheckoutItemPayload = {
   product: {
@@ -204,7 +205,7 @@ export class OrderRepository extends BaseRepository<
   /**
    * Lấy danh sách đơn hàng cho một Shop (Dành cho Seller)
    */
-  async findShopOrders(shopId: string, queryInput: any) {
+  async findShopOrders(shopId: string, queryInput: GetShopOrdersQuery) {
     const queryHelper = new PrismaQueryHelper(queryInput)
       .paginate()
       .applyFilter((q) => ({
