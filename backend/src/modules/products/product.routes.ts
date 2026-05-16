@@ -6,18 +6,17 @@ import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { validateProductImages } from '@/shared/middleware/validateImage.middlware';
 import { rateLimitMiddlware } from '@/shared/middleware/limiter.middlware';
-import { managementLimiter, publicLimiter } from '@/core/limiter/limiter.config';
+import { managementLimiter } from '@/core/limiter/limiter.config';
 import { catchAsync } from '@/shared/utils/catchAsync';
 
 const router = Router();
 
 router.get(
   '/',
-  rateLimitMiddlware(publicLimiter),
   validate(productSchema.getAll),
   catchAsync(productController.getAll),
 );
-router.get('/:slug', rateLimitMiddlware(publicLimiter), catchAsync(productController.getBySlug));
+router.get('/:slug',catchAsync(productController.getBySlug));
 
 router.use(protect);
 router.use(restrictTo('SELLER'));

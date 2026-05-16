@@ -4,25 +4,31 @@ import { adminController } from './admin.module';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { adminSchema } from './admin.schema';
 import { catchAsync } from '@/shared/utils/catchAsync';
+import { rateLimitMiddlware } from '@/shared/middleware/limiter.middlware';
+import { managementLimiter } from '@/core/limiter/limiter.config';
 
 const router = Router();
 
 router.use(protect);
 router.use(restrictTo('ADMIN'));
+
 router.patch(
   '/shops/:id/approve',
+  rateLimitMiddlware(managementLimiter),
   validate(adminSchema.approveShop),
   catchAsync(adminController.approveShop),
 );
 
 router.patch(
   '/shops/:id/ban',
+  rateLimitMiddlware(managementLimiter),
   validate(adminSchema.banShop),
   catchAsync(adminController.banShop),
 );
 
 router.patch(
   '/users/:id/ban',
+  rateLimitMiddlware(managementLimiter),
   validate(adminSchema.banUser),
   catchAsync(adminController.banUser),
 );

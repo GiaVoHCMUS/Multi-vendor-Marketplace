@@ -28,7 +28,7 @@ export const mailLimiter = new RateLimiterRedis({
 export const publicLimiter = new RateLimiterRedis({
   storeClient: redis,
   keyPrefix: `${PREFIX}:public`,
-  points: 60,
+  points: 200,
   duration: 60,
   useRedisPackage: true,
 });
@@ -46,7 +46,7 @@ export const transactionLimiter = new RateLimiterRedis({
 export const managementLimiter = new RateLimiterRedis({
   storeClient: redis,
   keyPrefix: `${PREFIX}:manage`,
-  points: 30,
-  duration: 60 * 60,
+  points: 60,
+  duration: 60,
   useRedisPackage: true,
 });

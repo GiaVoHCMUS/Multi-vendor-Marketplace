@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { orderController } from './order.module';
-import { protect, restrictTo } from '@/shared/middleware/auth.middleware';
+import { protect } from '@/shared/middleware/auth.middleware';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { orderSchema } from './order.schema';
 import { transactionLimiter } from '@/core/limiter/limiter.config';
@@ -22,7 +22,5 @@ router.get(
   validate(orderSchema.getOrderDetail),
   catchAsync(orderController.getOrderDetail),
 );
-
-router.use(restrictTo('SELLER'));
 
 export default router;

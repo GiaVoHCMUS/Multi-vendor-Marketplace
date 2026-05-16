@@ -10,10 +10,12 @@ import { registerRoutes } from './routes';
 import { loggerMiddleware } from './shared/middleware/logger.middleware';
 // import { loadSwagger } from './core/config/swagger';
 import { metricsMiddleware, getMetrics } from './shared/middleware/metrics.middleware';
+import { publicLimiter } from './core/limiter/limiter.config';
+import { rateLimitMiddlware } from './shared/middleware/limiter.middlware';
 
 const app: Application = express();
 
-app.use(loggerMiddleware);  // Middleware log ra console.log
+app.use(loggerMiddleware); // Middleware log ra console.log
 app.use(metricsMiddleware); // Middleware đo lường thời gian và số lượng request (Prometheus)
 
 app.use(express.json());
@@ -28,8 +30,6 @@ app.use(cookieParser()); // Middleware để đọc cookie
 
 setupCron();
 
-registerRoutes(app);
-
 app.get('/metrics', getMetrics);
 
 app.get('/', (req, res) => {
@@ -43,6 +43,10 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
   });
 });
+
+app.use(rateLimitMiddlware(publicLimiter));
+
+registerRoutes(app);
 
 // Global Error Middleware
 app.use(globalErrorHandler);

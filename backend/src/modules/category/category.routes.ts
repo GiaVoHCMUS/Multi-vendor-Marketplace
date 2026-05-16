@@ -5,6 +5,8 @@ import { upload } from '@/shared/middleware/upload.middleware';
 import { validate } from '@/shared/middleware/validate.middleware';
 import { categorySchema } from './category.schema';
 import { catchAsync } from '@/shared/utils/catchAsync';
+import { rateLimitMiddlware } from '@/shared/middleware/limiter.middlware';
+import { managementLimiter } from '@/core/limiter/limiter.config';
 
 const router = Router();
 
@@ -13,6 +15,7 @@ router.get('/:slug', catchAsync(categoryController.getCategoryBySlug));
 
 router.use(protect);
 router.use(restrictTo('ADMIN'));
+router.use(rateLimitMiddlware(managementLimiter));
 router.post(
   '/',
   upload.single('category_image'),

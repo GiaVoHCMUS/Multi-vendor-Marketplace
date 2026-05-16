@@ -33,6 +33,7 @@ router.post(
 );
 router.post(
   '/reset-password',
+  rateLimitMiddlware(authLimiter),
   validate(authSchema.resetPassword),
   catchAsync(authController.resetPassword),
 );
