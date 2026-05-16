@@ -7,10 +7,10 @@ const prisma = new PrismaClient();
 async function exportIds() {
   console.log('Đang lấy danh sách ID từ database...');
 
-  // Lấy 5000 ID sản phẩm ngẫu nhiên
+  // Lấy 300 ID sản phẩm ngẫu nhiên
   const products = await prisma.product.findMany({
     select: { slug: true },
-    take: 5000,
+    take: 300,
   });
 
   const slugs = products.map((p) => p.slug);
