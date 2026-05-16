@@ -9,10 +9,13 @@ import { setupCron } from './jobs/cron';
 import { registerRoutes } from './routes';
 import { loggerMiddleware } from './shared/middleware/logger.middleware';
 // import { loadSwagger } from './core/config/swagger';
+import { metricsMiddleware, getMetrics } from './shared/middleware/metrics.middleware';
 
 const app: Application = express();
 
-app.use(loggerMiddleware);
+app.use(loggerMiddleware);  // Middleware log ra console.log
+app.use(metricsMiddleware); // Middleware đo lường thời gian và số lượng request (Prometheus)
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Middleware để đọc cookie
@@ -26,6 +29,8 @@ app.use(cookieParser()); // Middleware để đọc cookie
 setupCron();
 
 registerRoutes(app);
+
+app.get('/metrics', getMetrics);
 
 app.get('/', (req, res) => {
   return successResponse(res, 200, 'API is running', {
