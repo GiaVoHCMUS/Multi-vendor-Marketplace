@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 5s  # Cứ mỗi 5 giây, Prometheus sẽ đi lấy dữ liệu 1 lần
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Job này dùng để lấy dữ liệu từ ứng dụng Node.js của bạn
+  - job_name: 'nodejs_app'
+    metrics_path: '/metrics' 
+    static_configs:
+      # Dùng host.docker.internal để trỏ ra máy chủ gốc và gọi vào port 3000 của Backend
+      - targets: ['host.docker.internal:3000']
