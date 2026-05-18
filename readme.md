@@ -9,6 +9,9 @@
 ![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?&style=for-the-badge&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=Prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
+![k6](https://img.shields.io/badge/k6-7D64FF?style=for-the-badge&logo=k6&logoColor=white)
 
 A high-performance, robust, and scalable backend system for a Multi-vendor E-commerce platform. Engineered with a strong emphasis on **Clean Code**, **Modular-layered Architecture**, and **System Performance**.
 
@@ -16,6 +19,7 @@ A high-performance, robust, and scalable backend system for a Multi-vendor E-com
 - [🧠 System Architecture & Design Decisions](#-system-architecture--design-decisions)
 - [⚡ Background Jobs & Performance](#-background-jobs--performance)
 - [🚀 Key Features](#-key-features)
+- [📈 Observability & Performance Testing](#-observability--performance-testing)
 - [🛠 Tech Stack](#-tech-stack)
 - [📂 Core Project Structure](#-core-project-structure)
 - [⚙️ Getting Started](#getting-started)
@@ -65,6 +69,31 @@ To ensure ultra-fast API response times, heavy and scheduled tasks are offloaded
 * **Validation & Security:** Zod, JWT, Helmet, Rate Limiting
 * **Testing:** Jest, k6
 * **Infrastructure:** Docker, Docker Compose
+
+---
+
+## 📈 Observability & Performance Testing
+
+The system is rigorously tested for high concurrency and resilience using **k6**, with real-time monitoring visualized via **Prometheus** and **Grafana**.
+
+### 1. High Concurrency & Deadlock Prevention (Mixed Workload)
+Simulated a real-world Flash Sale scenario with mixed traffic (Browse, View, Add to Cart, Checkout). Achieved a **99.87% success rate** under heavy load with **0 database deadlocks** by implementing **Ordered Locking** in PostgreSQL/Prisma transactions and optimizing connection pool timeouts.
+
+![Mixed Workload Metrics](./backend//assets/load-test-mixed-workload-metrics.png)
+
+### 2. Redis Cache Effectiveness
+Implemented Redis caching for read-heavy operations (e.g., product catalog and details). Benchmarks demonstrate a massive reduction in latency and database CPU usage during traffic spikes.
+* **Without Cache (Database Bottleneck):**
+
+  ![Cache Disabled](./backend/assets/benchmarks/redis-cache-disabled.png)
+* **With Redis Cache (Stable P95 Latency):**
+
+  ![Cache Enabled](./backend/assets/benchmarks/redis-cache-enabled.png)
+
+### 3. Rate Limiting & Security Defenses
+Tested the API Gateway's resilience against malicious scraping and DDoS attacks. The Redis-backed Rate Limiter successfully blocks abusive traffic, maintaining system stability and returning `429 Too Many Requests`.
+git
+![Rate Limit Test](./backend/assets/rate-limit-test.png)
 
 ---
 
