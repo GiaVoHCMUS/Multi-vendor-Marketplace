@@ -67,6 +67,7 @@ To ensure ultra-fast API response times, heavy and scheduled tasks are offloaded
 * **Database:** PostgreSQL (Prisma ORM)
 * **Caching & Queues:** Redis, BullMQ
 * **Validation & Security:** Zod, JWT, Helmet, Rate Limiting
+* **Monitoring & Observability**: Prometheus, Grafana
 * **Testing:** Jest, k6
 * **Infrastructure:** Docker, Docker Compose
 
