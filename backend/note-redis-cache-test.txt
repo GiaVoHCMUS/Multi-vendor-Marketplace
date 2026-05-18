@@ -1,0 +1,127 @@
+TRƯỜNG HỢP 1. CÓ CACHE
+D:\MultivendorMarketplace\backend>k6 run tests/load/redis-cache-test.js
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: tests/load/redis-cache-test.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 250 max VUs, 2m30s max duration (incl. graceful stop):
+              * browse_product_list: Up to 150 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: getListWithFilters, gracefulStop: 30s)
+              * view_product_detail: Up to 100 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: getDetailBySlug, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{scenario:view_product_detail}
+    ✓ 'p(95)<100' p(95)=59.3ms
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 17052   140.348772/s
+    checks_succeeded...: 100.00% 17052 out of 17052
+    checks_failed......: 0.00%   0 out of 17052
+
+    ✓ List API - status 200
+    ✓ List API - no validation error
+    ✓ Detail API - status 200
+
+    HTTP
+    http_req_duration....................: avg=123.86ms min=316.3µs med=9.05ms max=5.01s p(90)=508.44ms p(95)=826.53ms
+      { expected_response:true }.........: avg=123.86ms min=316.3µs med=9.05ms max=5.01s p(90)=508.44ms p(95)=826.53ms
+      { scenario:view_product_detail }...: avg=29.07ms  min=413.1µs med=5.11ms max=1.14s p(90)=18.26ms  p(95)=59.3ms  
+    http_req_failed......................: 0.00%  0 out of 10770
+    http_reqs............................: 10770  88.643929/s
+
+    EXECUTION
+    iteration_duration...................: avg=2.11s    min=1s      med=2.1s   max=6.93s p(90)=2.92s    p(95)=3.06s   
+    iterations...........................: 10770  88.643929/s
+    vus..................................: 2      min=2          max=250
+    vus_max..............................: 250    min=250        max=250
+
+    NETWORK
+    data_received........................: 65 MB  532 kB/s
+    data_sent............................: 1.4 MB 11 kB/s
+
+
+
+
+running (2m01.5s), 000/250 VUs, 10770 complete and 0 interrupted iterations
+browse_product_list ✓ [======================================] 000/150 VUs  2m0s
+view_product_detail ✓ [======================================] 000/100 VUs  2m0s
+
+TRƯỜNG HỢP 2. TẮT CACHE
+
+D:\MultivendorMarketplace\backend>k6 run tests/load/redis-cache-test.js
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: tests/load/redis-cache-test.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 250 max VUs, 2m30s max duration (incl. graceful stop):
+              * browse_product_list: Up to 150 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: getListWithFilters, gracefulStop: 30s)
+              * view_product_detail: Up to 100 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: getDetailBySlug, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{scenario:view_product_detail}
+    ✗ 'p(95)<100' p(95)=5.3s
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 5205    42.58645/s
+    checks_succeeded...: 100.00% 5205 out of 5205
+    checks_failed......: 0.00%   0 out of 5205
+
+    ✓ List API - status 200
+    ✓ List API - no validation error
+    ✓ Detail API - status 200
+
+    HTTP
+    http_req_duration....................: avg=4.78s min=24.55ms med=4.67s max=12.5s  p(90)=9.39s  p(95)=9.91s 
+      { expected_response:true }.........: avg=4.78s min=24.55ms med=4.67s max=12.5s  p(90)=9.39s  p(95)=9.91s 
+      { scenario:view_product_detail }...: avg=3.67s min=28.23ms med=4.36s max=6s     p(90)=5.19s  p(95)=5.3s  
+    http_req_failed......................: 0.00%  0 out of 3419
+    http_reqs............................: 3419   27.973693/s
+
+    EXECUTION
+    iteration_duration...................: avg=6.78s min=1.03s   med=6.6s  max=14.73s p(90)=11.38s p(95)=12.02s
+    iterations...........................: 3419   27.973693/s
+    vus..................................: 1      min=1         max=250
+    vus_max..............................: 250    min=250       max=250
+
+    NETWORK
+    data_received........................: 19 MB  154 kB/s
+    data_sent............................: 431 kB 3.5 kB/s
+
+
+
+
+running (2m02.2s), 000/250 VUs, 3419 complete and 0 interrupted iterations
+browse_product_list ✓ [======================================] 000/150 VUs  2m0s
+view_product_detail ✓ [======================================] 000/100 VUs  2m0s
+ERRO[0122] thresholds on metrics 'http_req_duration{scenario:view_product_detail}' have been crossed

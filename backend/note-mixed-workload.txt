@@ -1,0 +1,79 @@
+D:\MultivendorMarketplace\backend>k6 run tests/load/mixed-workload-test.js     
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: tests/load/mixed-workload-test.js
+        output: -
+
+     scenarios: (100.00%) 5 scenarios, 93 max VUs, 2m30s max duration (incl. graceful stop):
+              * browse_products: Up to 40 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: browseProducts, gracefulStop: 30s)
+              * search_products: Up to 5 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: searchProducts, gracefulStop: 30s)
+              * seller_update_product: Up to 3 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: sellerUpdateProduct, gracefulStop: 30s)
+              * shopping_flow: Up to 15 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: shoppingFlow, gracefulStop: 30s)
+              * view_product_detail: Up to 30 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, exec: viewProductDetail, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration
+    ✗ 'p(95)<1000' p(95)=2.83s
+      {scenario:checkout_flow}
+      ✓ 'p(95)<2000' p(95)=0s
+
+      {scenario:view_product_detail}
+      ✗ 'p(95)<150' p(95)=1.45s
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=0.12%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 3104   25.141721/s
+    checks_succeeded...: 99.87% 3100 out of 3104
+    checks_failed......: 0.12%  4 out of 3104
+
+    ✓ Browse Products - status 200
+    ✓ View Detail - status 200
+    ✗ Cart - Add success
+      ↳  99% — ✓ 457 / ✗ 1
+    ✗ Checkout - success
+      ↳  97% — ✓ 136 / ✗ 3
+    ✓ Search Products - status 200
+    ✓ Seller Update Product - success
+
+    HTTP
+    http_req_duration....................: avg=825.86ms min=519.5µs med=252.99ms max=7.35s  p(90)=2.05s p(95)=2.83s
+      { expected_response:true }.........: avg=825.81ms min=519.5µs med=252.99ms max=7.35s  p(90)=2.05s p(95)=2.83s
+      { scenario:checkout_flow }.........: avg=0s       min=0s      med=0s       max=0s     p(90)=0s    p(95)=0s   
+      { scenario:view_product_detail }...: avg=186.19ms min=519.5µs med=5.67ms   max=2.04s  p(90)=1.05s p(95)=1.45s
+    http_req_failed......................: 0.12%  4 out of 3104
+    http_reqs............................: 3104   25.141721/s
+
+    EXECUTION
+    iteration_duration...................: avg=2.88s    min=5.59ms  med=2.59s    max=13.29s p(90)=4.66s p(95)=6.46s
+    iterations...........................: 2965   24.015851/s
+    vus..................................: 2      min=1         max=93
+    vus_max..............................: 93     min=93        max=93
+
+    NETWORK
+    data_received........................: 16 MB  129 kB/s
+    data_sent............................: 565 kB 4.6 kB/s
+
+
+
+
+running (2m03.5s), 00/93 VUs, 2965 complete and 0 interrupted iterations
+browse_products       ✓ [======================================] 00/40 VUs  2m0s
+search_products       ✓ [======================================] 0/5 VUs    2m0s
+seller_update_product ✓ [======================================] 0/3 VUs    2m0s
+shopping_flow         ✓ [======================================] 00/15 VUs  2m0s
+view_product_detail   ✓ [======================================] 00/30 VUs  2m0s
+ERRO[0123] thresholds on metrics 'http_req_duration, http_req_duration{scenario:view_product_detail}' have been crossed 
