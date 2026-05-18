@@ -5,7 +5,7 @@ import { SharedArray } from 'k6/data';
 // 1. Đọc danh sách 300 product slugs từ file JSON vừa tạo
 // Dùng SharedArray để tối ưu RAM cho k6, chỉ đọc file 1 lần duy nhất cho tất cả VUs
 const productSlugs = new SharedArray('Product Slugs', function () {
-  return JSON.parse(open('./product_ids.json'));
+  return JSON.parse(open('./product_slugs.json'));
 });
 
 // 1. Đọc danh sách category slugs từ file JSON vừa tạo

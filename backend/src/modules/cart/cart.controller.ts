@@ -20,7 +20,7 @@ export class CartController {
 
     await this.cartService.addToCart(userId, req.body);
 
-    successResponse(res, StatusCodes.OK, MESSAGE.CART.ADD_PRODUCT_SUCCESS);
+    successResponse(res, StatusCodes.CREATED, MESSAGE.CART.ADD_PRODUCT_SUCCESS);
   };
 
   updateItem = async (req: Request, res: Response) => {
