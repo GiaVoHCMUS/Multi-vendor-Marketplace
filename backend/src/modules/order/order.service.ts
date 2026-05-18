@@ -101,53 +101,66 @@ export class OrderService {
       shopMap.get(shopId)!.push(item);
     }
 
-    const result = await this.txManager.run(async (tx) => {
-      // Chuyển tất cả Repo sang mode Transaction
-      const groupRepoTx = this.orderGroupRepo.useTransaction(tx);
-      const orderRepoTx = this.orderRepo.useTransaction(tx);
-      const itemRepoTx = this.orderItemRepo.useTransaction(tx);
-      const productRepoTx = this.productRepo.useTransaction(tx);
+    // Fix lỗi 1 (DEADLOCK). Sắp xếp thứ tự khóa (Locking Order)
+    const sortedShopIds = Array.from(shopMap.keys()).sort((a, b) => a.localeCompare(b));
 
-      // 1. Lưu OrderGroup vào database
-      const orderGroup = await groupRepoTx.createOrderGroup({
-        userId,
-        totalAmount,
-        ...data,
-        paymentStatus: PaymentStatus.PENDING,
-      });
+    const result = await this.txManager.run(
+      async (tx) => {
+        // Chuyển tất cả Repo sang mode Transaction
+        const groupRepoTx = this.orderGroupRepo.useTransaction(tx);
+        const orderRepoTx = this.orderRepo.useTransaction(tx);
+        const itemRepoTx = this.orderItemRepo.useTransaction(tx);
+        const productRepoTx = this.productRepo.useTransaction(tx);
 
-      // 2. Chia các orderGroup đó thành các Order nhỏ hơn (theo Shop)
-      // Tạo Order theo từng shop và lưu OrderItem cho cho Order này, cũng như trừ số lượng Products của seller
-      for (const [shopId, items] of shopMap) {
-        const shopTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-        const order = await orderRepoTx.createOrder({
-          orderGroupId: orderGroup.id,
-          shopId,
-          totalAmount: shopTotal,
-          status: OrderStatus.PENDING,
+        // 1. Lưu OrderGroup vào database
+        const orderGroup = await groupRepoTx.createOrderGroup({
+          userId,
+          totalAmount,
+          ...data,
+          paymentStatus: PaymentStatus.PENDING,
         });
 
-        for (const item of items) {
-          await itemRepoTx.createOrderItem({
-            orderId: order.id,
-            productId: item.product.id,
-            quantity: item.quantity,
-            priceAtPurchase: item.price,
+        // 2. Chia các orderGroup đó thành các Order nhỏ hơn (theo Shop)
+        // Tạo Order theo từng shop và lưu OrderItem cho cho Order này, cũng như trừ số lượng Products của seller
+        for (const shopId of sortedShopIds) {
+          const items = shopMap.get(shopId)!;
+          const shopTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+          const order = await orderRepoTx.createOrder({
+            orderGroupId: orderGroup.id,
+            shopId,
+            totalAmount: shopTotal,
+            status: OrderStatus.PENDING,
           });
 
-          await productRepoTx.decrementStock(item.product.id, item.quantity);
-        }
-      }
+          // Sắp xếp ProductId từ bé đến lớn trong cùng 1 shop
+          const sortedItems = [...items].sort((a, b) => a.product.id.localeCompare(b.product.id));
 
-      return orderGroup;
-    });
+          for (const item of sortedItems) {
+            await itemRepoTx.createOrderItem({
+              orderId: order.id,
+              productId: item.product.id,
+              quantity: item.quantity,
+              priceAtPurchase: item.price,
+            });
+
+            await productRepoTx.decrementStock(item.product.id, item.quantity);
+          }
+        }
+
+        return orderGroup;
+      },
+      { maxWait: 10000, timeout: 20000 },
+    );
 
     // Invalidate cache
     const productSlugs = products.map((p) => p.slug);
     await this.productCacheRepo.invalidateCachesAfterCheckout(productSlugs);
 
-    if (data.paymentMethod === PaymentMethod.COD) {
+    if (
+      data.paymentMethod === PaymentMethod.COD ||
+      data.paymentMethod === PaymentMethod.MOCK_PAYMENT
+    ) {
       // COD -> xóa cart và gửi mail ngay
       await this.cartRepo.clear(userId);
 
