@@ -54,9 +54,29 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, Args, W> imple
     return await this.modelDelegate.create({ data, ...args });
   }
 
+  async createMany(
+    data: CreateInput[],
+    skipDuplicates = false,
+    args?: Args,
+  ): Promise<Prisma.BatchPayload> {
+    return await this.modelDelegate.createMany({
+      data,
+      skipDuplicates,
+      ...args,
+    });
+  }
+
   async update(id: string | number, data: UpdateInput, args?: Args): Promise<T> {
     return await this.modelDelegate.update({
       where: { id },
+      data,
+      ...args,
+    });
+  }
+
+  async updateMany(where: W, data: UpdateInput, args?: Args): Promise<Prisma.BatchPayload> {
+    return await this.modelDelegate.updateMany({
+      where,
       data,
       ...args,
     });

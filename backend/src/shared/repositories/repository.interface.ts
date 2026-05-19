@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from '@prisma/client';
 
 export interface IRepository<T, CreateInput, UpdateInput, Args, W> {
   // Tìm kiếm
@@ -8,7 +8,13 @@ export interface IRepository<T, CreateInput, UpdateInput, Args, W> {
 
   // Hành động (Create, Update, Delete)
   create(data: CreateInput, args?: Args): Promise<T>;
-  update(id: string | number, data: UpdateInput, args?: Args): Promise<T>;
+  createMany(
+    data: CreateInput[],
+    skipDuplicates: boolean,
+    args?: Args,
+  ): Promise<Prisma.BatchPayload>;
+  update(id: string | number, data: UpdateInput): Promise<T>;
+  updateMany(where: W, data: UpdateInput, args?: Args): Promise<Prisma.BatchPayload>;
   delete(id: string | number): Promise<T>;
 
   // Tiện ích
