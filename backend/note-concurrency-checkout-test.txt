@@ -1,0 +1,55 @@
+D:\MultivendorMarketplace\backend>k6 run tests/load/concurrency-checkout-test.js
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: tests/load/concurrency-checkout-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 100 max VUs, 40s max duration (incl. graceful stop):
+              * overselling_test: 1 iterations for each of 100 VUs (maxDuration: 10s, exec: checkoutProduct, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate>0.99' rate=100.00%
+
+    http_req_duration
+    ✓ 'p(95)<2000' p(95)=552.49ms
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 200     346.821391/s
+    checks_succeeded...: 100.00% 200 out of 200
+    checks_failed......: 0.00%   0 out of 200
+
+    ✓ Valid response status
+    ✓ No Internal Server Error
+
+    HTTP
+    http_req_duration..............: avg=382.44ms min=218.88ms med=376.75ms max=562.61ms p(90)=530.26ms p(95)=552.49ms
+      { expected_response:true }...: avg=262.55ms min=240.11ms med=264.22ms max=274.51ms p(90)=273.18ms p(95)=273.84ms
+    http_req_failed................: 95.00% 95 out of 100
+    http_reqs......................: 100    173.410695/s
+
+    EXECUTION
+    iteration_duration.............: avg=389.41ms min=231.93ms med=380.62ms max=571.18ms p(90)=538.21ms p(95)=553.21ms
+    iterations.....................: 100    173.410695/s
+
+    NETWORK
+    data_received..................: 41 kB  71 kB/s
+    data_sent......................: 49 kB  85 kB/s
+
+
+
+
+running (00.6s), 000/100 VUs, 100 complete and 0 interrupted iterations
+overselling_test ✓ [======================================] 100 VUs  00.6s/10s  100/100 iters, 1 per VU
