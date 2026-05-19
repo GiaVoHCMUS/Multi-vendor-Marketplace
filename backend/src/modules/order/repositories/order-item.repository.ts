@@ -15,4 +15,8 @@ export class OrderItemRepository extends BaseRepository<
   async createOrderItem(data: Prisma.OrderItemUncheckedCreateInput) {
     return this.create(data);
   }
+
+  async createManyOrderItems(data: Prisma.OrderItemUncheckedCreateInput[]) {
+    return this.createMany(data, true);
+  }
 }

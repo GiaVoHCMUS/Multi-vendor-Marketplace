@@ -136,15 +136,27 @@ export class OrderService {
           // Sắp xếp ProductId từ bé đến lớn trong cùng 1 shop
           const sortedItems = [...items].sort((a, b) => a.product.id.localeCompare(b.product.id));
 
-          for (const item of sortedItems) {
-            await itemRepoTx.createOrderItem({
-              orderId: order.id,
-              productId: item.product.id,
-              quantity: item.quantity,
-              priceAtPurchase: item.price,
-            });
+          const orderItemPayloads = sortedItems.map((item) => ({
+            orderId: order.id,
+            productId: item.product.id,
+            quantity: item.quantity,
+            priceAtPurchase: item.price,
+          }));
 
-            await productRepoTx.decrementStock(item.product.id, item.quantity);
+          await itemRepoTx.createManyOrderItems(orderItemPayloads);
+
+          for (const item of sortedItems) {
+            const isStockDeducted = await productRepoTx.decrementStock(
+              item.product.id,
+              item.quantity,
+            );
+
+            if (!isStockDeducted) {
+              throw new AppError(
+                `Rất tiếc, sản phẩm "${item.product.name}" đã hết hàng hoặc không đủ số lượng!`,
+                StatusCodes.CONFLICT,
+              );
+            }
           }
         }
 

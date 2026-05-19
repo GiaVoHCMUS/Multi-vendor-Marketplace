@@ -169,7 +169,12 @@ export class ProductRepository extends BaseRepository<
   }
 
   async decrementStock(productId: string, quantity: number) {
-    return this.update(productId, { stock: { decrement: quantity } });
+    const result = await this.updateMany(
+      { id: productId, stock: { gte: quantity } },
+      { stock: { decrement: quantity } },
+    );
+
+    return result.count > 0;
   }
 
   /**
