@@ -75,7 +75,10 @@ describe('OrderService', () => {
       createOrderGroup: jest.fn(),
       updatePaymentStatus: jest.fn(),
     };
-    mockOrderItemRepo = { useTransaction: jest.fn().mockReturnThis(), createOrderItem: jest.fn() };
+    mockOrderItemRepo = {
+      useTransaction: jest.fn().mockReturnThis(),
+      createManyOrderItems: jest.fn(),
+    };
     mockShopRepo = { useTransaction: jest.fn().mockReturnThis(), incrementBalance: jest.fn() };
     mockTransactionRepo = {
       useTransaction: jest.fn().mockReturnThis(),
@@ -108,7 +111,14 @@ describe('OrderService', () => {
     };
     const user = { id: userId, email: 'test@gmail.com', fullName: 'Tester' };
     const mockProducts = [
-      { id: 'prod-1', price: 100, stock: 10, shopId: 'shop-1', slug: 'prod-1-slug' },
+      {
+        id: 'prod-1',
+        name: 'Product 1',
+        price: 100,
+        stock: 10,
+        shopId: 'shop-1',
+        slug: 'prod-1-slug',
+      },
     ];
     const mockCart = { 'prod-1': '2' };
 
@@ -177,6 +187,8 @@ describe('OrderService', () => {
 
       mockOrderGroupRepo.createOrderGroup.mockResolvedValue(mockOrderGroup);
       mockOrderRepo.createOrder.mockResolvedValue(mockOrder);
+      mockOrderItemRepo.createManyOrderItems.mockResolvedValue({ count: 1 });
+      mockProductRepo.decrementStock.mockResolvedValue(true);
 
       const result = await orderService.checkout(userId, ipAddr, checkoutData);
 
@@ -208,13 +220,14 @@ describe('OrderService', () => {
       );
 
       // Kiểm tra tạo OrderItem và trừ kho
-      expect(mockOrderItemRepo.createOrderItem).toHaveBeenCalledWith(
+      expect(mockOrderItemRepo.createManyOrderItems).toHaveBeenCalledWith([
         expect.objectContaining({
           orderId: 'order-1',
           productId: 'prod-1',
           quantity: 2,
+          priceAtPurchase: 100,
         }),
-      );
+      ]);
       expect(mockProductRepo.decrementStock).toHaveBeenCalledWith('prod-1', 2);
 
       // Kiểm tra hậu xử lý COD: Xóa giỏ, gửi mail, xóa cache
@@ -242,6 +255,8 @@ describe('OrderService', () => {
       const mockOrder = { id: 'order-1' };
       mockOrderGroupRepo.createOrderGroup.mockResolvedValue(mockOrderGroup);
       mockOrderRepo.createOrder.mockResolvedValue(mockOrder);
+      mockOrderItemRepo.createManyOrderItems.mockResolvedValue({ count: 1 });
+      mockProductRepo.decrementStock.mockResolvedValue(true);
 
       const fakePaymentUrl = 'http://vnpay.com/pay';
       (paymentService.createPayment as jest.Mock).mockResolvedValue(fakePaymentUrl);
