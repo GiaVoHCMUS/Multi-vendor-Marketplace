@@ -161,6 +161,7 @@ model Product {
   stock         Int           @default(0)
   status        ProductStatus @default(DRAFT)
   averageRating Decimal       @default(0) @db.Decimal(3, 2)
+  thumbnailUrl  String
   
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -172,10 +173,6 @@ model Product {
   reviews       Review[]
   images        ProductImage[]
 
-  // @@unique([shopId, slug])
-  // @@index([categoryId, price, status])
-  // @@index([price, status, deletedAt])
-  // @@index([name, status])    
   @@index([status, deletedAt, createdAt(sort: Desc), id(sort: Desc)]) 
   @@index([shopId, status, deletedAt, createdAt(sort: Desc), id(sort: Desc)])
   @@index([categoryId, status, deletedAt, createdAt(sort: Desc), id(sort: Desc)])

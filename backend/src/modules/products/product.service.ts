@@ -98,28 +98,13 @@ export class ProductService {
           });
         }
 
-        // Format data
-        const data = items.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          averageRating: p.averageRating,
-          image: p.images[0]?.url || null,
-          description: p.description,
-          stock: p.stock,
-          status: p.status,
-          shop: p.shop,
-          category: p.category,
-        }));
-
         if (!meta || meta.type !== 'cursor') {
           throw new AppError(MESSAGE.COMMON.INVALID_PAGINATION, 400);
         }
 
         // Meta
         return {
-          data,
+          data: items,
           meta: {
             limit,
             nextCursor,
@@ -179,12 +164,10 @@ export class ProductService {
       price: data.price,
       stock: data.stock,
       status: data.status,
-      shop: {
-        connect: { id: shop.id },
-      },
-      category: {
-        connect: { id: data.categoryId },
-      },
+      thumbnailUrl: images[0].url,
+
+      shop: { connect: { id: shop.id } },
+      category: { connect: { id: data.categoryId } },
       images: {
         create: images.map((img, index) => ({
           url: img.url,
@@ -210,6 +193,8 @@ export class ProductService {
       ...data,
       slug: data.name ? slugHelper.generate(data.name) : product.slug,
       ...(images && {
+        thumbnailUrl: images[0].url,
+
         images: {
           deleteMany: {},
 

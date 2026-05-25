@@ -154,7 +154,16 @@ export class ProductRepository extends BaseRepository<
 
     const products = await this.modelDelegate.findMany({
       ...prismaArgs,
-      select: this.productSelect,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        stock: true,
+        status: true,
+        averageRating: true,
+        thumbnailUrl: true,
+      },
     });
 
     return { products, meta };
