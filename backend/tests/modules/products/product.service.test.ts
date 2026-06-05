@@ -23,31 +23,6 @@ jest.mock('@/shared/utils/slug', () => ({
   },
 }));
 
-// jest.mock('@/modules/category/category.repository', () => ({
-//   categoryRepository: {
-//     getBySlug: jest.fn(),
-//     findById: jest.fn(),
-//   },
-// }));
-
-// jest.mock('@/modules/shop/shop.repository', () => ({
-//   shopRepository: {
-//     findShopBySlug: jest.fn(),
-//     findShopByOwerId: jest.fn(),
-//   },
-// }));
-
-// jest.mock('@/modules/products/repositories/product.repository', () => ({
-//   productRepository: {
-//     findProductList: jest.fn(),
-//     findProductBySlug: jest.fn(),
-//     createProduct: jest.fn(),
-//     updateProduct: jest.fn(),
-//     findProductById: jest.fn(),
-//     delete: jest.fn(),
-//   },
-// }));
-
 jest.mock('@/shared/utils/cursor', () => ({
   cursorUtil: {
     encode: jest.fn(),
@@ -62,7 +37,6 @@ describe('productService', () => {
 
   const userId = 'user-123';
   const productId = 'prod-123';
-  const shopId = 'shop-123';
   const categoryId = 1;
   const image = 'image.jpg';
 
@@ -71,9 +45,7 @@ describe('productService', () => {
     name: 'Test Product',
     slug: 'test-product',
     price: 100,
-    images: [{ url: image }],
-    shop: { id: shopId, name: 'My Shop' },
-    category: { id: categoryId, name: 'Electronics' },
+    thumbnailUrl: image,
     status: ProductStatus.PUBLISHED,
   };
 
@@ -130,7 +102,7 @@ describe('productService', () => {
       const result = await productService.getAll(queryInput);
 
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].image).toBe(image);
+      expect(result.data[0].thumbnailUrl).toBe(image);
       expect(mockProductRepo.findProductList).toHaveBeenCalledWith(queryInput, {});
     });
 
